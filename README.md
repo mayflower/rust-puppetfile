@@ -14,3 +14,6 @@ mod 'mayflower/php', '1.0.1'
 ```
 
 See `examples` for another simple example.
+
+## Documentation
+At [rust-ci](http://www.rust-ci.org/Mayflower/rust-puppetfile/doc/puppetfile/)
