@@ -8,6 +8,7 @@ mod puppetfile_parser;
 
 /// This represents a Puppetfile
 #[deriving(Show, PartialEq)]
+#[experimental]
 pub struct Puppetfile {
     /// The forge URL
     pub forge: String,
@@ -24,6 +25,7 @@ impl Puppetfile {
 
 /// The representation of a puppet module
 #[deriving(Show, PartialEq)]
+#[experimental]
 pub struct Module {
     /// Name of the module
     pub name: String,
