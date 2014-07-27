@@ -1,0 +1,153 @@
+{
+  use std::num::from_str_radix;
+  use std::char;
+  use super::*;
+}
+
+use std::num::from_str_radix;
+use std::char;
+
+
+#[export]
+parse -> Puppetfile
+  = __ forge:forge __ modules:modules
+  { Puppetfile{ forge: forge, modules: modules } }
+
+forge -> String
+  = "forge" __ url:string { url }
+
+modules -> Vec<Module>
+  = module*
+
+module -> Module
+  = "mod" __ name:string __ ("," __)? info:module_info __
+  { Module { name: name, info: info } }
+
+module_info -> Vec<ModuleInfo>
+  = i:((version / info_hash) ** ("," __)) { i }
+
+version -> ModuleInfo
+  = version:string __ { Version(version) }
+
+info_hash -> ModuleInfo
+  = key:symbol __ "=>" __ value:string __ { ModuleInfo(key, value) }
+
+symbol -> String
+  = ":" i:identifier { i }
+/*
+ * Modeled after ECMA-262, 5th ed., 7.6, but much simplified:
+ *
+ * * no Unicode escape sequences
+ *
+ * * "Unicode combining marks" and "Unicode connection punctuation" can't be
+ *   part of the identifier
+ *
+ * * only [a-zA-Z] is considered a "Unicode letter"
+ *
+ * * only [0-9] is considered a "Unicode digit"
+ *
+ * The simplifications were made just to make the implementation little bit
+ * easier, there is no "philosophical" reason behind them.
+ *
+ * Contrary to ECMA 262, the "$" character is not valid because it serves other
+ * purpose in the grammar.
+ */
+identifier -> String
+  = chars:((letter / "_") (letter / digit / "_")* {match_str.to_string()}) __ { chars }
+
+string -> String
+  = string:(doubleQuotedString / singleQuotedString) __ { string }
+
+doubleQuotedString -> String
+  = '"' s:doubleQuotedCharacter* '"' { String::from_chars(s.as_slice()) }
+
+doubleQuotedCharacter -> char
+  = simpleDoubleQuotedCharacter
+  / simpleEscapeSequence
+  / zeroEscapeSequence
+  / hexEscapeSequence
+  / unicodeEscapeSequence
+  / eolEscapeSequence
+
+simpleDoubleQuotedCharacter -> char
+  = !('"' / "\\" / eolChar) . { match_str.char_at(0) }
+
+singleQuotedString -> String
+  = "'" s:singleQuotedCharacter* "'" { String::from_chars(s.as_slice()) }
+
+singleQuotedCharacter -> char
+  = simpleSingleQuotedCharacter
+  / simpleEscapeSequence
+  / zeroEscapeSequence
+  / hexEscapeSequence
+  / unicodeEscapeSequence
+  / eolEscapeSequence
+
+simpleSingleQuotedCharacter -> char
+  = !("'" / "\\" / eolChar) . { match_str.char_at(0) }
+
+simpleEscapeSequence -> char
+  = "\\" !(digit / "x" / "u" / eolChar) . {
+      match match_str.char_at(1) {
+        //'b' => '\b',
+        //'f' => '\f',
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        //'v' => '\v',
+         x  => x
+      }
+    }
+
+zeroEscapeSequence -> char
+  = "\\0" !digit { 0u8 as char }
+
+hexEscapeSequence -> char
+  = "\\x" value:(hexDigit hexDigit { from_str_radix::<int>(match_str, 16) }) {
+      char::from_u32(value.unwrap() as u32).unwrap()
+    }
+
+unicodeEscapeSequence -> char
+  = "\\u" value:(hexDigit hexDigit hexDigit hexDigit { from_str_radix::<int>(match_str, 16)}) {
+      char::from_u32(value.unwrap() as u32).unwrap()
+    }
+
+eolEscapeSequence -> char
+  = "\\" eol:eol { '\n' }
+
+digit
+  = [0-9]
+
+hexDigit
+  = [0-9a-fA-F]
+
+letter
+  = lowerCaseLetter
+  / upperCaseLetter
+
+lowerCaseLetter
+  = [a-z]
+
+upperCaseLetter
+  = [A-Z]
+
+__ = (whitespace / eol / comment)*
+
+comment
+  = "#" (!eolChar .)*
+
+/* Modeled after ECMA-262, 5th ed., 7.3. */
+eol
+  = "\n"
+  / "\r\n"
+  / "\r"
+  / "\u2028"
+  / "\u2029"
+
+eolChar
+  = [\n\r\u2028\u2029]
+
+/* Modeled after ECMA-262, 5th ed., 7.2. */
+whitespace
+  = [ \t\u00A0\uFEFF\u1680\u180E\u2000-\u200A\u202F\u205F\u3000] // \v\f removed
+
