@@ -4,10 +4,12 @@
 #![deny(missing_doc)]
 #![feature(globs)]
 
+use std::fmt;
+
 mod puppetfile_parser;
 
 /// This represents a Puppetfile
-#[deriving(Show, PartialEq)]
+#[deriving(PartialEq)]
 #[experimental]
 pub struct Puppetfile {
     /// The forge URL
@@ -22,9 +24,16 @@ impl Puppetfile {
         puppetfile_parser::parse(contents)
     }
 }
+impl fmt::Show for Puppetfile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let res = write!(f, "forge '{}'\n\n", self.forge);
+        self.modules.iter().fold(res, |prev_res, module| { prev_res.and(write!(f, "\n{}\n", module)) })
+    }
+}
+
 
 /// The representation of a puppet module
-#[deriving(Show, PartialEq)]
+#[deriving(PartialEq)]
 #[experimental]
 pub struct Module {
     /// Name of the module
@@ -33,13 +42,35 @@ pub struct Module {
     pub info: Vec<ModuleInfo>
 }
 
+impl fmt::Show for Module {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let res = write!(f, "mod '{}'", self.name);
+        self.info.iter().fold(res, |prev_res, mod_info| {
+            match *mod_info {
+                Version(..) => prev_res.and(write!(f, ", {}", mod_info)),
+                ModuleInfo(..) => prev_res.and(write!(f, ",\n  {}", mod_info)),
+            }
+        })
+    }
+}
+
+
 /// Further Information on Puppet Modules
-#[deriving(Show, PartialEq)]
+#[deriving(PartialEq)]
 pub enum ModuleInfo {
     /// Version as String
     Version(String),
     /// Key Value based Information
     ModuleInfo(String, String)
+}
+
+impl fmt::Show for ModuleInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Version(ref v) => write!(f, "{}", v),
+            ModuleInfo(ref k, ref v) => write!(f, ":{} => {}", k, v)
+        }
+    }
 }
 
 #[cfg(test)]
