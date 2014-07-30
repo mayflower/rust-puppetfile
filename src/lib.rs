@@ -47,7 +47,7 @@ impl fmt::Show for Module {
         let res = write!(f, "mod '{}'", self.name);
         self.info.iter().fold(res, |prev_res, mod_info| {
             match *mod_info {
-                Version(..) => prev_res.and(write!(f, ", {}", mod_info)),
+                Version(..) => prev_res.and(write!(f, ", '{}'", mod_info)),
                 ModuleInfo(..) => prev_res.and(write!(f, ",\n  {}", mod_info)),
             }
         })
@@ -68,7 +68,7 @@ impl fmt::Show for ModuleInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Version(ref v) => write!(f, "{}", v),
-            ModuleInfo(ref k, ref v) => write!(f, ":{} => {}", k, v)
+            ModuleInfo(ref k, ref v) => write!(f, ":{} => '{}'", k, v)
         }
     }
 }
@@ -158,4 +158,43 @@ mod 'mayflower/php',
             parsed.modules[0]
         );
     }
+
+    #[test]
+    fn format() {
+        let version = Version(String::from_str("1.0.0"));
+        assert_eq!(String::from_str("1.0.0"), format!("{}", version));
+
+        let mod_info = ModuleInfo(
+            String::from_str("git"),
+            String::from_str("git://github.com/Mayflower/puppet-php.git")
+        );
+        assert_eq!(
+            String::from_str(":git => 'git://github.com/Mayflower/puppet-php.git'"),
+            format!("{}", mod_info)
+        );
+
+        let module = Module {
+            name: String::from_str("mayflower/php"),
+            info: vec![version, mod_info]
+        };
+        assert_eq!(
+            String::from_str("mod 'mayflower/php', '1.0.0',
+  :git => 'git://github.com/Mayflower/puppet-php.git'"),
+            format!("{}", module)
+        );
+
+        let puppetfile = Puppetfile {
+            forge: String::from_str("https://forge.puppetlabs.com"),
+            modules: vec![module]
+        };
+        assert_eq!(
+            String::from_str("forge 'https://forge.puppetlabs.com'
+
+
+mod 'mayflower/php', '1.0.0',
+  :git => 'git://github.com/Mayflower/puppet-php.git'
+"),
+            format!("{}", puppetfile)
+        );
+     }
 }
