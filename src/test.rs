@@ -1,4 +1,5 @@
 use super::*;
+use url::Url;
 
 #[test]
 fn empty_file() {
@@ -119,4 +120,33 @@ mod 'mayflower/php', '1.0.0',
 "),
         format!("{}", puppetfile)
     );
+}
+
+#[test]
+fn version_url() {
+    let module = Module { name: String::from_str("mayflower/php"), info: vec![] };
+    assert_eq!(
+        "https://forge.puppetlabs.com/users/mayflower/modules/php/releases/find.json",
+        format!(
+            "{}",
+            module.version_url(
+                String::from_str("https://forge.puppetlabs.com/")
+            )
+        ).as_slice()
+    )
+}
+
+#[test]
+fn user_name_pair() {
+    let module = Module { name: String::from_str("mayflower/php"), info: vec![] };
+    assert_eq!(module.user_name_pair(), ("mayflower", "php"))
+}
+
+#[test]
+fn forge_version() {
+    let module = Module { name: String::from_str("puppetlabs/nginx"), info: vec![] };
+    assert_eq!(
+        module.forge_version(String::from_str("https://forge.puppetlabs.com/")),
+        String::from_str("99.99.99")
+    )
 }

@@ -4,9 +4,20 @@
 #![deny(missing_doc)]
 #![feature(globs)]
 
+extern crate http;
+extern crate serialize;
+extern crate url;
+
 use std::fmt;
+use serialize::json;
+use http::client::RequestWriter;
+use http::method::Get;
+use url::Url;
 
 mod puppetfile_parser;
+
+#[cfg(test)]
+mod test;
 
 /// This represents a Puppetfile
 #[deriving(PartialEq)]
@@ -42,6 +53,42 @@ pub struct Module {
     pub info: Vec<ModuleInfo>
 }
 
+#[deriving(Decodable)]
+struct ForgeVersionResponse {
+    version: String
+}
+
+#[experimental]
+impl Module {
+    /// The current version of the module returned from the forge API
+    pub fn forge_version(&self, forge_url: String) -> String {
+        let request: RequestWriter = RequestWriter::new(Get, self.version_url(forge_url)).unwrap();
+        let mut response = match request.read_response() {
+            Ok(response) => response,
+            Err((_request, error)) => fail!(":-( {}", error),
+        };
+        let response_string = response.read_to_string().unwrap();
+        let version_struct: ForgeVersionResponse = json::decode(response_string.as_slice()).unwrap();
+        version_struct.version
+    }
+
+    /// Builds the URL for the forge API for fetching the version
+    pub fn version_url(&self, forge_url: String) -> Url {
+        let stripped_url = match forge_url.as_slice().ends_with("/") {
+            true => forge_url.as_slice().slice_to(forge_url.len() - 1),
+            _    => forge_url.as_slice()
+        };
+        let (user, mod_name) = self.user_name_pair();
+        Url::parse(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name).as_slice()).unwrap()
+    }
+
+    /// Returns user and module name from 'user/mod_name'
+    pub fn user_name_pair(&self) -> (&str, &str) {
+        // FIXME: ugly hack
+        let mut parts = self.name.as_slice().split('/');
+        (parts.next().unwrap(), parts.next().unwrap())
+    }
+}
 impl fmt::Show for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let res = write!(f, "mod '{}'", self.name);
@@ -73,5 +120,3 @@ impl fmt::Show for ModuleInfo {
     }
 }
 
-#[cfg(test)]
-mod test;
