@@ -29,6 +29,7 @@ pub struct Puppetfile {
     pub modules: Vec<Module>
 }
 
+#[experimental]
 impl Puppetfile {
     /// Try parsing the contents of a Puppetfile into a Puppetfile struct
     pub fn parse(contents: &str) -> Result<Puppetfile, String> {
@@ -78,15 +79,18 @@ impl Module {
             true => forge_url.as_slice().slice_to(forge_url.len() - 1),
             _    => forge_url.as_slice()
         };
-        let (user, mod_name) = self.user_name_pair();
+        let (user, mod_name) = self.user_name_pair().unwrap();
         Url::parse(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name).as_slice()).unwrap()
     }
 
     /// Returns user and module name from 'user/mod_name'
-    pub fn user_name_pair(&self) -> (&str, &str) {
-        // FIXME: ugly hack
-        let mut parts = self.name.as_slice().split('/');
-        (parts.next().unwrap(), parts.next().unwrap())
+    pub fn user_name_pair(&self) -> Option<(&str, &str)> {
+        if self.name.as_slice().contains("/") {
+            let mut parts = self.name.as_slice().split('/');
+            Some((parts.next().unwrap(), parts.next().unwrap()))
+        } else {
+            None
+        }
     }
 }
 impl fmt::Show for Module {

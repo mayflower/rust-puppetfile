@@ -139,7 +139,7 @@ fn version_url() {
 #[test]
 fn user_name_pair() {
     let module = Module { name: String::from_str("mayflower/php"), info: vec![] };
-    assert_eq!(module.user_name_pair(), ("mayflower", "php"))
+    assert_eq!(module.user_name_pair(), Some(("mayflower", "php")))
 }
 
 #[test]
