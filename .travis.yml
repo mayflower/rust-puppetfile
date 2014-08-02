@@ -5,7 +5,8 @@ install:
   - curl -s http://www.rust-lang.org/rustup.sh | sudo sh
 script:
   - cargo test
-  - make doc
+  - cargo doc
+  - cp -R target/doc doc
 
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
