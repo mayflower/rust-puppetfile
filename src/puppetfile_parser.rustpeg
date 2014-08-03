@@ -2,11 +2,12 @@
   use std::num::from_str_radix;
   use std::char;
   use super::*;
+  use semver;
 }
 
 use std::num::from_str_radix;
 use std::char;
-
+use semver;
 
 #[export]
 parse -> Puppetfile
@@ -27,7 +28,7 @@ module_info -> Vec<ModuleInfo>
   = i:((version / info_hash) ** ("," __)) { i }
 
 version -> ModuleInfo
-  = version:string __ { Version(version) }
+  = version:string __ { Version(semver::parse(version.as_slice()).unwrap()) }
 
 info_hash -> ModuleInfo
   = key:symbol __ "=>" __ value:string __ { ModuleInfo(key, value) }

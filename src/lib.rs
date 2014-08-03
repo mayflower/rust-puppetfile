@@ -6,6 +6,7 @@
 
 extern crate http;
 extern crate serialize;
+extern crate semver;
 extern crate url;
 
 use std::fmt;
@@ -20,7 +21,7 @@ mod puppetfile_parser;
 mod test;
 
 /// This represents a Puppetfile
-#[deriving(PartialEq)]
+#[deriving(PartialEq, Clone)]
 #[experimental]
 pub struct Puppetfile {
     /// The forge URL
@@ -45,7 +46,7 @@ impl fmt::Show for Puppetfile {
 
 
 /// The representation of a puppet module
-#[deriving(PartialEq)]
+#[deriving(PartialEq, Clone)]
 #[experimental]
 pub struct Module {
     /// Name of the module
@@ -62,7 +63,7 @@ struct ForgeVersionResponse {
 #[experimental]
 impl Module {
     /// The current version of the module returned from the forge API
-    pub fn forge_version(&self, forge_url: String) -> String {
+    pub fn forge_version(&self, forge_url: String) -> Option<semver::Version> {
         let request: RequestWriter = RequestWriter::new(Get, self.version_url(forge_url)).unwrap();
         let mut response = match request.read_response() {
             Ok(response) => response,
@@ -70,7 +71,7 @@ impl Module {
         };
         let response_string = response.read_to_string().unwrap();
         let version_struct: ForgeVersionResponse = json::decode(response_string.as_slice()).unwrap();
-        version_struct.version
+        semver::parse(version_struct.version.as_slice())
     }
 
     /// Builds the URL for the forge API for fetching the version
@@ -92,6 +93,17 @@ impl Module {
             None
         }
     }
+
+    /// Returns the version if specified
+    pub fn version(&self) -> Option<semver::Version> {
+        for info in self.info.iter() {
+            match *info {
+                Version(ref v) => return Some(v.clone()),
+                ModuleInfo(..) => ()
+            }
+        }
+        None
+    }
 }
 impl fmt::Show for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -107,12 +119,21 @@ impl fmt::Show for Module {
 
 
 /// Further Information on Puppet Modules
-#[deriving(PartialEq)]
+#[deriving(PartialEq, Clone)]
 pub enum ModuleInfo {
     /// Version as String
-    Version(String),
+    Version(semver::Version),
     /// Key Value based Information
     ModuleInfo(String, String)
+}
+impl ModuleInfo {
+    /// Returns `true` if the option is a `Version` value
+    pub fn is_version(&self) -> bool {
+        match *self {
+            Version(..)    => true,
+            ModuleInfo(..) => false
+        }
+    }
 }
 
 impl fmt::Show for ModuleInfo {

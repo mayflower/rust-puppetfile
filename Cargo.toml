@@ -14,3 +14,5 @@ path = "src/lib.rs"
 [dependencies.http]
 git = "https://github.com/chris-morgan/rust-http"
 
+[dependencies.semver]
+git = "https://github.com/rust-lang/semver"
