@@ -9,7 +9,8 @@
 fn slice_eq(input: &str, pos: uint, m: &str) -> Result<(uint, ()), uint> {
     #![inline]
     let l = m.len();
-    if input.len() >= pos + l && input.slice(pos, pos + l) == m {
+    if input.len() >= pos + l &&
+           input.as_bytes().slice(pos, pos + l) == m.as_bytes() {
         Ok((pos + l, ()))
     } else { Err(pos) }
 }
@@ -335,7 +336,7 @@ fn parse_version(input: &str, pos: uint) -> Result<(uint, ModuleInfo), uint> {
                                     let match_str =
                                         input.slice(start_pos, pos);
                                     Ok((pos,
-                                        Version(semver::parse(version.as_slice()).unwrap())))
+                                        Version(semver::VersionRange::parse(version.as_slice()).unwrap())))
                                 }
                             }
                         }

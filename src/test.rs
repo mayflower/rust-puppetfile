@@ -1,6 +1,5 @@
 use super::*;
 use semver;
-use url::Url;
 
 #[test]
 fn empty_file() {
@@ -52,7 +51,7 @@ mod 'mayflower/php', '1.0.1'
     assert_eq!(
         Module {
             name: String::from_str("mayflower/php"),
-            info: vec![Version(semver::parse("1.0.1").unwrap())]
+            info: vec![Version(semver::VersionRange::parse("1.0.1").unwrap())]
         },
         parsed.modules[0]
     );
@@ -86,7 +85,7 @@ mod 'mayflower/php',
 
 #[test]
 fn format() {
-    let version = Version(semver::parse("1.0.0").unwrap());
+    let version = Version(semver::VersionRange::parse("1.0.0").unwrap());
     assert_eq!(String::from_str("1.0.0"), format!("{}", version));
 
     let mod_info = ModuleInfo(
@@ -148,6 +147,6 @@ fn forge_version() {
     let module = Module { name: String::from_str("puppetlabs/nginx"), info: vec![] };
     assert_eq!(
         module.forge_version(String::from_str("https://forge.puppetlabs.com/")),
-        semver::parse("99.99.99")
+        semver::Version::parse("99.99.99")
     )
 }

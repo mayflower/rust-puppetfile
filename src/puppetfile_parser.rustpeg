@@ -28,7 +28,7 @@ module_info -> Vec<ModuleInfo>
   = i:((version / info_hash) ** ("," __)) { i }
 
 version -> ModuleInfo
-  = version:string __ { Version(semver::parse(version.as_slice()).unwrap()) }
+  = version:string __ { Version(semver::VersionRange::parse(version.as_slice()).unwrap()) }
 
 info_hash -> ModuleInfo
   = key:symbol __ "=>" __ value:string __ { ModuleInfo(key, value) }

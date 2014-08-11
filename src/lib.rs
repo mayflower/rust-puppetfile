@@ -71,7 +71,7 @@ impl Module {
         };
         let response_string = response.read_to_string().unwrap();
         let version_struct: ForgeVersionResponse = json::decode(response_string.as_slice()).unwrap();
-        semver::parse(version_struct.version.as_slice())
+        semver::Version::parse(version_struct.version.as_slice())
     }
 
     /// Builds the URL for the forge API for fetching the version
@@ -95,7 +95,7 @@ impl Module {
     }
 
     /// Returns the version if specified
-    pub fn version(&self) -> Option<semver::Version> {
+    pub fn version(&self) -> Option<semver::VersionRange> {
         for info in self.info.iter() {
             match *info {
                 Version(ref v) => return Some(v.clone()),
@@ -122,7 +122,7 @@ impl fmt::Show for Module {
 #[deriving(PartialEq, Clone)]
 pub enum ModuleInfo {
     /// Version as String
-    Version(semver::Version),
+    Version(semver::VersionRange),
     /// Key Value based Information
     ModuleInfo(String, String)
 }
