@@ -336,7 +336,7 @@ fn parse_version(input: &str, pos: uint) -> Result<(uint, ModuleInfo), uint> {
                                     let match_str =
                                         input.slice(start_pos, pos);
                                     Ok((pos,
-                                        Version(semver::VersionRange::parse(version.as_slice()).unwrap())))
+                                        Version(semver::version::parse(version.as_slice()).unwrap())))
                                 }
                             }
                         }
