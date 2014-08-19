@@ -1,4 +1,4 @@
-use super::*;
+use super::{Puppetfile, Module, ModuleInfo, Version};
 use semver;
 
 #[test]
