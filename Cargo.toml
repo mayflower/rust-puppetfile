@@ -6,7 +6,7 @@ version = "0.0.0"
 authors = ["Robin Gloster <robin.gloster@mayflower.de>"]
 tags = []
 
-[[lib]]
+[lib]
 
 name = "puppetfile"
 path = "src/lib.rs"
