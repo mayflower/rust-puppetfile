@@ -2,14 +2,8 @@
 
 name = "puppetfile"
 version = "0.0.0"
-
 authors = ["Robin Gloster <robin.gloster@mayflower.de>"]
-tags = []
 
-[lib]
-
-name = "puppetfile"
-path = "src/lib.rs"
 
 [dependencies.http]
 git = "https://github.com/chris-morgan/rust-http"
