@@ -7,7 +7,7 @@ use std::io::File;
 use std::os;
 use std::str;
 use std::sync::Future;
-use semver::version::{Version, ParseError};
+use semver::{Version, ParseError};
 use puppetfile::Puppetfile;
 
 

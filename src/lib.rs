@@ -10,7 +10,7 @@ extern crate semver;
 extern crate url;
 
 use std::fmt;
-use semver::version::Version;
+use semver::Version;
 use serialize::json;
 use http::client::RequestWriter;
 use http::method::Get;
@@ -64,7 +64,7 @@ struct ForgeVersionResponse {
 #[experimental]
 impl Module {
     /// The current version of the module returned from the forge API
-    pub fn forge_version(&self, forge_url: String) -> Result<Version, semver::version::ParseError> {
+    pub fn forge_version(&self, forge_url: String) -> Result<Version, semver::ParseError> {
         let request: RequestWriter = RequestWriter::new(Get, self.version_url(forge_url)).unwrap();
         let mut response = match request.read_response() {
             Ok(response) => response,
@@ -72,7 +72,7 @@ impl Module {
         };
         let response_string = response.read_to_string().unwrap();
         let version_struct: ForgeVersionResponse = json::decode(response_string.as_slice()).unwrap();
-        semver::version::parse(version_struct.version.as_slice())
+        semver::Version::parse(version_struct.version.as_slice())
     }
 
     /// Builds the URL for the forge API for fetching the version
