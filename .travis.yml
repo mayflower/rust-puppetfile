@@ -1,10 +1,10 @@
 env:
   global:
     - secure: X8BWpokkOkfvt0ZzHOpSYCT+ZR37H/sLgiOxaE1unkGgZsjz0T3CfNnVVVLutlXzb2LDO1vBKdLbr5NyOEO6CBtPGZ2f9o2l/S4ACmkhaYt3s5aE+WCpCv3NGrHizZgawI38ZNnTvHThFm5j1MRCc1Fkdizc6/4aYKCs36hte8o=
-install:
-  - curl -s http://www.rust-lang.org/rustup.sh | sudo sh
+
+language: rust
+
 script:
-  - cargo test
   - cargo doc
   - cp -R target/doc doc
 
