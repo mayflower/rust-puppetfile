@@ -6,7 +6,7 @@ authors = ["Robin Gloster <robin.gloster@mayflower.de>"]
 
 
 [dependencies.http]
-git = "https://github.com/globin/rust-http"
+git = "https://github.com/chris-morgan/rust-http"
 
 [dependencies.semver]
 git = "https://github.com/globin/semver"
