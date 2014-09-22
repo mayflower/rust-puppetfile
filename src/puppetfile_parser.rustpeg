@@ -2,7 +2,7 @@
   use std::num::from_str_radix;
   use std::char;
   use super::*;
-  use semver;
+  use semver::VersionReq;
 }
 
 use std::num::from_str_radix;
@@ -24,13 +24,13 @@ module -> Module
   = "mod" __ name:string __ ("," __)? info:module_info __
   { Module { name: name, info: info } }
 
-module_info -> Vec<ModuleInfo>
+module_info -> Vec<PuppetModuleInfo>
   = i:((version / info_hash) ** ("," __)) { i }
 
-version -> ModuleInfo
-  = version:string __ { Version(semver::Version::parse(version.as_slice()).unwrap()) }
+version -> PuppetModuleInfo
+  = version:string __ { Version(VersionReq::parse(version.as_slice()).unwrap()) }
 
-info_hash -> ModuleInfo
+info_hash -> PuppetModuleInfo
   = key:symbol __ "=>" __ value:string __ { ModuleInfo(key, value) }
 
 symbol -> String

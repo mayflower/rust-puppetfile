@@ -10,8 +10,8 @@ extern crate semver;
 extern crate url;
 
 use std::fmt;
-use semver::Version;
 use serialize::json;
+use semver::VersionReq;
 use http::client::RequestWriter;
 use http::method::Get;
 use url::Url;
@@ -53,7 +53,7 @@ pub struct Module {
     /// Name of the module
     pub name: String,
     /// More information about the module
-    pub info: Vec<ModuleInfo>
+    pub info: Vec<PuppetModuleInfo>
 }
 
 #[deriving(Decodable)]
@@ -64,7 +64,7 @@ struct ForgeVersionResponse {
 #[experimental]
 impl Module {
     /// The current version of the module returned from the forge API
-    pub fn forge_version(&self, forge_url: String) -> Result<Version, semver::ParseError> {
+    pub fn forge_version(&self, forge_url: String) -> Result<semver::Version, semver::ParseError> {
         let request: RequestWriter = RequestWriter::new(Get, self.version_url(forge_url)).unwrap();
         let mut response = match request.read_response() {
             Ok(response) => response,
@@ -96,7 +96,7 @@ impl Module {
     }
 
     /// Returns the version if specified
-    pub fn version(&self) -> Option<Version> {
+    pub fn version(&self) -> Option<VersionReq> {
         for info in self.info.iter() {
             match *info {
                 Version(ref v) => return Some(v.clone()),
@@ -121,13 +121,13 @@ impl fmt::Show for Module {
 
 /// Further Information on Puppet Modules
 #[deriving(PartialEq, Clone)]
-pub enum ModuleInfo {
+pub enum PuppetModuleInfo {
     /// Version as String
-    Version(Version),
+    Version(VersionReq),
     /// Key Value based Information
     ModuleInfo(String, String)
 }
-impl ModuleInfo {
+impl PuppetModuleInfo {
     /// Returns `true` if the option is a `Version` value
     pub fn is_version(&self) -> bool {
         match *self {
@@ -137,7 +137,7 @@ impl ModuleInfo {
     }
 }
 
-impl fmt::Show for ModuleInfo {
+impl fmt::Show for PuppetModuleInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Version(ref v) => write!(f, "{}", v),

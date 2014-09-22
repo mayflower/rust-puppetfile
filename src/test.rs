@@ -1,5 +1,5 @@
 use super::{Puppetfile, Module, ModuleInfo, Version};
-use semver;
+use semver::{mod, VersionReq};
 
 #[test]
 fn empty_file() {
@@ -51,7 +51,7 @@ mod 'mayflower/php', '1.0.1'
     assert_eq!(
         Module {
             name: String::from_str("mayflower/php"),
-            info: vec![Version(semver::Version::parse("1.0.1").unwrap())]
+            info: vec![Version(VersionReq::parse("1.0.1").unwrap())]
         },
         parsed.modules[0]
     );
@@ -85,8 +85,8 @@ mod 'mayflower/php',
 
 #[test]
 fn format() {
-    let version = Version(semver::Version::parse("1.0.0").unwrap());
-    assert_eq!(String::from_str("1.0.0"), format!("{}", version));
+    let version = Version(VersionReq::parse("1.0.0").unwrap());
+    assert_eq!(String::from_str("= 1.0.0"), format!("{}", version));
 
     let mod_info = ModuleInfo(
         String::from_str("git"),
@@ -102,7 +102,7 @@ fn format() {
         info: vec![version, mod_info]
     };
     assert_eq!(
-        String::from_str("mod 'mayflower/php', '1.0.0',
+        String::from_str("mod 'mayflower/php', '= 1.0.0',
   :git => 'git://github.com/Mayflower/puppet-php.git'"),
         format!("{}", module)
     );
@@ -115,7 +115,7 @@ fn format() {
         String::from_str("forge 'https://forge.puppetlabs.com'
 
 
-mod 'mayflower/php', '1.0.0',
+mod 'mayflower/php', '= 1.0.0',
   :git => 'git://github.com/Mayflower/puppet-php.git'
 "),
         format!("{}", puppetfile)

@@ -4,7 +4,7 @@
   use std::num::from_str_radix;
   use std::char;
   use super::*;
-  use semver;
+  use semver::VersionReq;
 
 fn slice_eq(input: &str, pos: uint, m: &str) -> Result<(uint, ()), uint> {
     #![inline]
@@ -263,7 +263,7 @@ fn parse_module(input: &str, pos: uint) -> Result<(uint, Module), uint> {
     }
 }
 fn parse_module_info(input: &str, pos: uint) ->
- Result<(uint, Vec<ModuleInfo>), uint> {
+ Result<(uint, Vec<PuppetModuleInfo>), uint> {
     {
         let start_pos = pos;
         {
@@ -321,7 +321,8 @@ fn parse_module_info(input: &str, pos: uint) ->
         }
     }
 }
-fn parse_version(input: &str, pos: uint) -> Result<(uint, ModuleInfo), uint> {
+fn parse_version(input: &str, pos: uint) ->
+ Result<(uint, PuppetModuleInfo), uint> {
     {
         let start_pos = pos;
         {
@@ -338,7 +339,7 @@ fn parse_version(input: &str, pos: uint) -> Result<(uint, ModuleInfo), uint> {
                                     let match_str =
                                         input.slice(start_pos, pos);
                                     Ok((pos,
-                                        Version(semver::Version::parse(version.as_slice()).unwrap())))
+                                        Version(VersionReq::parse(version.as_slice()).unwrap())))
                                 }
                             }
                         }
@@ -349,7 +350,7 @@ fn parse_version(input: &str, pos: uint) -> Result<(uint, ModuleInfo), uint> {
     }
 }
 fn parse_info_hash(input: &str, pos: uint) ->
- Result<(uint, ModuleInfo), uint> {
+ Result<(uint, PuppetModuleInfo), uint> {
     {
         let start_pos = pos;
         {
@@ -1164,7 +1165,7 @@ fn parse_digit(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
         let ::std::str::CharRange { ch: ch, next: next } =
             input.char_range_at(pos);
-        match ch { '0' ..'9' => Ok((next, ())), _ => Err(pos), }
+        match ch { '0' ...'9' => Ok((next, ())), _ => Err(pos), }
     } else { Err(pos) }
 }
 fn parse_hexDigit(input: &str, pos: uint) -> Result<(uint, ()), uint> {
@@ -1172,7 +1173,7 @@ fn parse_hexDigit(input: &str, pos: uint) -> Result<(uint, ()), uint> {
         let ::std::str::CharRange { ch: ch, next: next } =
             input.char_range_at(pos);
         match ch {
-            '0' ..'9' | 'a' ..'f' | 'A' ..'F' => Ok((next, ())),
+            '0' ...'9' | 'a' ...'f' | 'A' ...'F' => Ok((next, ())),
             _ => Err(pos),
         }
     } else { Err(pos) }
@@ -1190,14 +1191,14 @@ fn parse_lowerCaseLetter(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
         let ::std::str::CharRange { ch: ch, next: next } =
             input.char_range_at(pos);
-        match ch { 'a' ..'z' => Ok((next, ())), _ => Err(pos), }
+        match ch { 'a' ...'z' => Ok((next, ())), _ => Err(pos), }
     } else { Err(pos) }
 }
 fn parse_upperCaseLetter(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
         let ::std::str::CharRange { ch: ch, next: next } =
             input.char_range_at(pos);
-        match ch { 'A' ..'Z' => Ok((next, ())), _ => Err(pos), }
+        match ch { 'A' ...'Z' => Ok((next, ())), _ => Err(pos), }
     } else { Err(pos) }
 }
 fn parse___(input: &str, pos: uint) -> Result<(uint, ()), uint> {
@@ -1308,7 +1309,7 @@ fn parse_whitespace(input: &str, pos: uint) -> Result<(uint, ()), uint> {
             input.char_range_at(pos);
         match ch {
             ' ' | '\t' | '\xa0' | '\ufeff' | '\u1680' | '\u180e' | '\u2000'
-            ..'\u200a' | '\u202f' | '\u205f' | '\u3000' => Ok((next, ())),
+            ...'\u200a' | '\u202f' | '\u205f' | '\u3000' => Ok((next, ())),
             _ => Err(pos),
         }
     } else { Err(pos) }

@@ -26,7 +26,7 @@ fn main() {
     let puppetfile = Puppetfile::parse(puppetfile_contents).unwrap();
 
     let modules = puppetfile.modules.clone();
-    let mut version_ftrs: Vec<Future<(String, Result<Version, ParseError>)>> = modules.move_iter().filter(
+    let mut version_ftrs: Vec<Future<(String, Result<Version, ParseError>)>> = modules.into_iter().filter(
         |m| m.user_name_pair().is_some()
     ).map(|m| {
         let forge_url = puppetfile.forge.clone();
@@ -35,7 +35,7 @@ fn main() {
         })
     }).collect();
 
-    let versions: Vec<(String, Version)> = version_ftrs.mut_iter().map(
+    let versions: Vec<(String, Version)> = version_ftrs.iter_mut().map(
         |ftr| ftr.get()
     ).filter_map(
         |tpl| match tpl {
@@ -51,8 +51,8 @@ fn main() {
     for module in modules_to_check {
         for &(ref name, ref version) in versions.iter() {
             if module.name == *name && module.version().is_some() &&
-                    module.version().unwrap() != *version {
-                println!("{}: {} != {}", module.name, module.version().unwrap(), version)
+                    !module.version().unwrap().matches(version) {
+                println!("{}: {} doesn't match {}", module.name, module.version().unwrap(), version)
             }
         }
     }
