@@ -69,7 +69,8 @@ pub struct ForgeVersionError(String);
 impl Module {
     /// The current version of the module returned from the forge API
     pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, ForgeVersionError> {
-        let request: RequestWriter = try!(RequestWriter::new(Get, self.version_url(forge_url)).map_err(|err|
+        let url = try!(self.version_url(forge_url));
+        let request: RequestWriter = try!(RequestWriter::new(Get, url).map_err(|err|
             ForgeVersionError(format!("{}", err))
         ));
         let mut response = try!(request.read_response().map_err(|(_, err)|
@@ -87,13 +88,18 @@ impl Module {
     }
 
     /// Builds the URL for the forge API for fetching the version
-    pub fn version_url(&self, forge_url: &String) -> Url {
+    pub fn version_url(&self, forge_url: &String) -> Result<Url, ForgeVersionError> {
         let stripped_url = match forge_url.as_slice().ends_with("/") {
             true => forge_url.as_slice().slice_to(forge_url.len() - 1),
             _    => forge_url.as_slice()
         };
-        let (user, mod_name) = self.user_name_pair().unwrap();
-        Url::parse(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name).as_slice()).unwrap()
+        let (user, mod_name) = match self.user_name_pair() {
+            Some((user, mod_name)) => (user, mod_name),
+            None => return Err(ForgeVersionError("Could not build url".to_string()))
+        };
+        Url::parse(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name).as_slice()).map_err(|err|
+            ForgeVersionError(format!("{}", err))
+        )
     }
 
     /// Returns user and module name from 'user/mod_name'

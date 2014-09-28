@@ -131,7 +131,7 @@ fn version_url() {
             "{}",
             module.version_url(
                 &"https://forge.puppetlabs.com/".to_string()
-            )
+            ).unwrap()
         ).as_slice()
     )
 }
