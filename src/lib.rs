@@ -61,18 +61,29 @@ struct ForgeVersionResponse {
     version: String
 }
 
+/// represents an error while checking the version published on the forge
+#[deriving(Clone, Show)]
+pub struct ForgeVersionError(String);
+
 #[experimental]
 impl Module {
     /// The current version of the module returned from the forge API
-    pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, semver::ParseError> {
-        let request: RequestWriter = RequestWriter::new(Get, self.version_url(forge_url)).unwrap();
-        let mut response = match request.read_response() {
-            Ok(response) => response,
-            Err((_request, error)) => fail!(":-( {}", error),
-        };
-        let response_string = response.read_to_string().unwrap();
-        let version_struct: ForgeVersionResponse = json::decode(response_string.as_slice()).unwrap();
-        semver::Version::parse(version_struct.version.as_slice())
+    pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, ForgeVersionError> {
+        let request: RequestWriter = try!(RequestWriter::new(Get, self.version_url(forge_url)).map_err(|err|
+            ForgeVersionError(format!("{}", err))
+        ));
+        let mut response = try!(request.read_response().map_err(|(_, err)|
+            ForgeVersionError(format!("{}", err))
+        ));
+        let response_string = try!(response.read_to_string().map_err(|err|
+            ForgeVersionError(format!("{}", err))
+        ));
+        let version_struct: ForgeVersionResponse = try!(json::decode(response_string.as_slice()).map_err(|err|
+            ForgeVersionError(format!("{}", err))
+        ));
+        semver::Version::parse(version_struct.version.as_slice()).map_err(|err|
+            ForgeVersionError(format!("{}", err))
+        )
     }
 
     /// Builds the URL for the forge API for fetching the version

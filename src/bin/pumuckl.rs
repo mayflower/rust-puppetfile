@@ -7,8 +7,8 @@ use std::io::File;
 use std::os;
 use std::str;
 use std::sync::Future;
-use semver::{Version, ParseError};
-use puppetfile::Puppetfile;
+use semver::Version;
+use puppetfile::{ForgeVersionError, Puppetfile};
 
 
 fn main() {
@@ -26,7 +26,7 @@ fn main() {
     let puppetfile = Puppetfile::parse(puppetfile_contents).unwrap();
 
     let modules = puppetfile.modules.clone();
-    let mut version_ftrs: Vec<Future<(String, Result<Version, ParseError>)>> = modules.into_iter().filter(
+    let mut version_ftrs: Vec<Future<(String, Result<Version, ForgeVersionError>)>> = modules.into_iter().filter(
         |m| m.user_name_pair().is_some()
     ).map(|m| {
         let forge_url = puppetfile.forge.clone();
