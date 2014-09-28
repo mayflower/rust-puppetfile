@@ -64,7 +64,7 @@ struct ForgeVersionResponse {
 #[experimental]
 impl Module {
     /// The current version of the module returned from the forge API
-    pub fn forge_version(&self, forge_url: String) -> Result<semver::Version, semver::ParseError> {
+    pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, semver::ParseError> {
         let request: RequestWriter = RequestWriter::new(Get, self.version_url(forge_url)).unwrap();
         let mut response = match request.read_response() {
             Ok(response) => response,
@@ -76,7 +76,7 @@ impl Module {
     }
 
     /// Builds the URL for the forge API for fetching the version
-    pub fn version_url(&self, forge_url: String) -> Url {
+    pub fn version_url(&self, forge_url: &String) -> Url {
         let stripped_url = match forge_url.as_slice().ends_with("/") {
             true => forge_url.as_slice().slice_to(forge_url.len() - 1),
             _    => forge_url.as_slice()

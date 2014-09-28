@@ -130,7 +130,7 @@ fn version_url() {
         format!(
             "{}",
             module.version_url(
-                String::from_str("https://forge.puppetlabs.com/")
+                &"https://forge.puppetlabs.com/".to_string()
             )
         ).as_slice()
     )
@@ -146,7 +146,7 @@ fn user_name_pair() {
 fn forge_version() {
     let module = Module { name: String::from_str("puppetlabs/nginx"), info: vec![] };
     assert_eq!(
-        module.forge_version(String::from_str("https://forge.puppetlabs.com/")),
+        module.forge_version(&"https://forge.puppetlabs.com/".to_string()),
         semver::Version::parse("99.99.99")
     )
 }

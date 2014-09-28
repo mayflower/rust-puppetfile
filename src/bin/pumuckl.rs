@@ -31,7 +31,7 @@ fn main() {
     ).map(|m| {
         let forge_url = puppetfile.forge.clone();
         Future::spawn(proc() {
-            (m.name.clone(), m.forge_version(forge_url))
+            (m.name.clone(), m.forge_version(&forge_url))
         })
     }).collect();
 
