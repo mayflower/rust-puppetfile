@@ -96,10 +96,10 @@ impl Module {
     }
 
     /// Returns the version if specified
-    pub fn version(&self) -> Option<VersionReq> {
+    pub fn version(&self) -> Option<&VersionReq> {
         for info in self.info.iter() {
             match *info {
-                Version(ref v) => return Some(v.clone()),
+                Version(ref v) => return Some(v),
                 ModuleInfo(..) => ()
             }
         }
