@@ -2,6 +2,7 @@
 
 #![crate_name = "puppetfile"]
 #![deny(missing_doc)]
+#![feature(slicing_syntax)]
 #![feature(globs)]
 
 extern crate http;
@@ -79,33 +80,33 @@ impl Module {
         let response_string = try!(response.read_to_string().map_err(|err|
             ForgeVersionError(format!("{}", err))
         ));
-        let version_struct: ForgeVersionResponse = try!(json::decode(response_string.as_slice()).map_err(|err|
+        let version_struct: ForgeVersionResponse = try!(json::decode(response_string[]).map_err(|err|
             ForgeVersionError(format!("{}", err))
         ));
-        semver::Version::parse(version_struct.version.as_slice()).map_err(|err|
+        semver::Version::parse(version_struct.version[]).map_err(|err|
             ForgeVersionError(format!("{}", err))
         )
     }
 
     /// Builds the URL for the forge API for fetching the version
     pub fn version_url(&self, forge_url: &String) -> Result<Url, ForgeVersionError> {
-        let stripped_url = match forge_url.as_slice().ends_with("/") {
-            true => forge_url.as_slice().slice_to(forge_url.len() - 1),
-            _    => forge_url.as_slice()
+        let stripped_url = match forge_url[].ends_with("/") {
+            true => forge_url[..forge_url.len() - 1],
+            _    => forge_url[]
         };
         let (user, mod_name) = match self.user_name_pair() {
             Some((user, mod_name)) => (user, mod_name),
             None => return Err(ForgeVersionError("Could not build url".to_string()))
         };
-        Url::parse(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name).as_slice()).map_err(|err|
+        Url::parse(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name)[]).map_err(|err|
             ForgeVersionError(format!("{}", err))
         )
     }
 
     /// Returns user and module name from 'user/mod_name'
     pub fn user_name_pair(&self) -> Option<(&str, &str)> {
-        if self.name.as_slice().contains("/") {
-            let mut parts = self.name.as_slice().split('/');
+        if self.name[].contains("/") {
+            let mut parts = self.name[].split('/');
             Some((parts.next().unwrap(), parts.next().unwrap()))
         } else {
             None

@@ -3,11 +3,8 @@
   use std::char;
   use super::*;
   use semver::VersionReq;
+  use semver;
 }
-
-use std::num::from_str_radix;
-use std::char;
-use semver;
 
 #[export]
 parse -> Puppetfile
@@ -28,31 +25,20 @@ module_info -> Vec<PuppetModuleInfo>
   = i:((version / info_hash) ** ("," __)) { i }
 
 version -> PuppetModuleInfo
-  = version:string __ { Version(VersionReq::parse(version.as_slice()).unwrap()) }
+  = version:string __ {
+    if semver::Version::parse(version[]).is_ok() {
+        Version(VersionReq::parse(format!("={}", version)[]).unwrap())
+    } else {
+        Version(VersionReq::parse(version[]).unwrap())
+    }
+}
 
 info_hash -> PuppetModuleInfo
   = key:symbol __ "=>" __ value:string __ { ModuleInfo(key, value) }
 
 symbol -> String
   = ":" i:identifier { i }
-/*
- * Modeled after ECMA-262, 5th ed., 7.6, but much simplified:
- *
- * * no Unicode escape sequences
- *
- * * "Unicode combining marks" and "Unicode connection punctuation" can't be
- *   part of the identifier
- *
- * * only [a-zA-Z] is considered a "Unicode letter"
- *
- * * only [0-9] is considered a "Unicode digit"
- *
- * The simplifications were made just to make the implementation little bit
- * easier, there is no "philosophical" reason behind them.
- *
- * Contrary to ECMA 262, the "$" character is not valid because it serves other
- * purpose in the grammar.
- */
+
 identifier -> String
   = chars:((letter / "_") (letter / digit / "_")* {match_str.to_string()}) __ { chars }
 
@@ -60,7 +46,7 @@ string -> String
   = string:(doubleQuotedString / singleQuotedString) __ { string }
 
 doubleQuotedString -> String
-  = '"' s:doubleQuotedCharacter* '"' { String::from_chars(s.as_slice()) }
+  = '"' s:doubleQuotedCharacter* '"' { String::from_chars(s[]) }
 
 doubleQuotedCharacter -> char
   = simpleDoubleQuotedCharacter
@@ -137,7 +123,6 @@ __ = (whitespace / eol / comment)*
 comment
   = "#" (!eolChar .)*
 
-/* Modeled after ECMA-262, 5th ed., 7.3. */
 eol
   = "\n"
   / "\r\n"
@@ -148,7 +133,6 @@ eol
 eolChar
   = [\n\r\u2028\u2029]
 
-/* Modeled after ECMA-262, 5th ed., 7.2. */
 whitespace
-  = [ \t\u00A0\uFEFF\u1680\u180E\u2000-\u200A\u202F\u205F\u3000] // \v\f removed
+  = [ \t\u00A0\uFEFF\u1680\u180E\u2000-\u200A\u202F\u205F\u3000]
 

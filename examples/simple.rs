@@ -1,5 +1,4 @@
 extern crate puppetfile;
-extern crate debug;
 
 use std::io::File;
 use std::os;
@@ -17,6 +16,5 @@ fn main() {
         }
     );
 
-    println!("{:?}", puppetfile);
     println!("{}", puppetfile);
 }

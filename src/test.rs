@@ -51,7 +51,7 @@ mod 'mayflower/php', '1.0.1'
     assert_eq!(
         Module {
             name: String::from_str("mayflower/php"),
-            info: vec![Version(VersionReq::parse("1.0.1").unwrap())]
+            info: vec![Version(VersionReq::parse("= 1.0.1").unwrap())]
         },
         parsed.modules[0]
     );
@@ -85,7 +85,7 @@ mod 'mayflower/php',
 
 #[test]
 fn format() {
-    let version = Version(VersionReq::parse("1.0.0").unwrap());
+    let version = Version(VersionReq::parse("= 1.0.0").unwrap());
     assert_eq!(String::from_str("= 1.0.0"), format!("{}", version));
 
     let mod_info = ModuleInfo(
@@ -132,7 +132,7 @@ fn version_url() {
             module.version_url(
                 &"https://forge.puppetlabs.com/".to_string()
             ).unwrap()
-        ).as_slice()
+        )[]
     )
 }
 

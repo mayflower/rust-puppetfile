@@ -1,3 +1,5 @@
+#![feature(slicing_syntax)]
+
 extern crate puppetfile;
 extern crate http;
 extern crate serialize;
@@ -16,13 +18,13 @@ fn main() {
     let path = if args.len() == 1 {
         Path::new("Puppetfile")
     } else {
-        Path::new(args[1].as_slice())
+        Path::new(args[1][])
     };
     let file_raw_bytes = match File::open(&path).read_to_end() {
         Ok(bytes)  => bytes,
         Err(error) => fail!("{}", error)
     };
-    let puppetfile_contents = str::from_utf8(file_raw_bytes.as_slice()).unwrap();
+    let puppetfile_contents = str::from_utf8(file_raw_bytes[]).unwrap();
     let puppetfile = Puppetfile::parse(puppetfile_contents).unwrap();
 
     let modules = puppetfile.modules.clone();

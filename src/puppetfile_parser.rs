@@ -5,6 +5,7 @@
   use std::char;
   use super::*;
   use semver::VersionReq;
+  use semver;
 
 fn slice_eq(input: &str, pos: uint, m: &str) -> Result<(uint, ()), uint> {
     #![inline]
@@ -339,7 +340,14 @@ fn parse_version(input: &str, pos: uint) ->
                                     let match_str =
                                         input.slice(start_pos, pos);
                                     Ok((pos,
-                                        Version(VersionReq::parse(version.as_slice()).unwrap())))
+                                        if semver::Version::parse(version[]).is_ok()
+                                           {
+                                            Version(VersionReq::parse(format!("={}"
+                                                                              ,
+                                                                              version)[]).unwrap())
+                                        } else {
+                                            Version(VersionReq::parse(version[]).unwrap())
+                                        }))
                                 }
                             }
                         }
@@ -629,7 +637,7 @@ fn parse_doubleQuotedString(input: &str, pos: uint) ->
                                                     input.slice(start_pos,
                                                                 pos);
                                                 Ok((pos,
-                                                    String::from_chars(s.as_slice())))
+                                                    String::from_chars(s[])))
                                             }
                                         }
                                     }
