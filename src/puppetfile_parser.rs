@@ -1194,15 +1194,13 @@ fn parse_eolEscapeSequence(input: &str, pos: uint) ->
 }
 fn parse_digit(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
-        let ::std::str::CharRange { ch: ch, next: next } =
-            input.char_range_at(pos);
+        let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch { '0' ...'9' => Ok((next, ())), _ => Err(pos), }
     } else { Err(pos) }
 }
 fn parse_hexDigit(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
-        let ::std::str::CharRange { ch: ch, next: next } =
-            input.char_range_at(pos);
+        let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch {
             '0' ...'9' | 'a' ...'f' | 'A' ...'F' => Ok((next, ())),
             _ => Err(pos),
@@ -1220,15 +1218,13 @@ fn parse_letter(input: &str, pos: uint) -> Result<(uint, ()), uint> {
 }
 fn parse_lowerCaseLetter(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
-        let ::std::str::CharRange { ch: ch, next: next } =
-            input.char_range_at(pos);
+        let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch { 'a' ...'z' => Ok((next, ())), _ => Err(pos), }
     } else { Err(pos) }
 }
 fn parse_upperCaseLetter(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
-        let ::std::str::CharRange { ch: ch, next: next } =
-            input.char_range_at(pos);
+        let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch { 'A' ...'Z' => Ok((next, ())), _ => Err(pos), }
     } else { Err(pos) }
 }
@@ -1326,8 +1322,7 @@ fn parse_eol(input: &str, pos: uint) -> Result<(uint, ()), uint> {
 }
 fn parse_eolChar(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
-        let ::std::str::CharRange { ch: ch, next: next } =
-            input.char_range_at(pos);
+        let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch {
             '\n' | '\r' | '\u2028' | '\u2029' => Ok((next, ())),
             _ => Err(pos),
@@ -1336,8 +1331,7 @@ fn parse_eolChar(input: &str, pos: uint) -> Result<(uint, ()), uint> {
 }
 fn parse_whitespace(input: &str, pos: uint) -> Result<(uint, ()), uint> {
     if input.len() > pos {
-        let ::std::str::CharRange { ch: ch, next: next } =
-            input.char_range_at(pos);
+        let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch {
             ' ' | '\t' | '\xa0' | '\ufeff' | '\u1680' | '\u180e' | '\u2000'
             ...'\u200a' | '\u202f' | '\u205f' | '\u3000' => Ok((next, ())),
@@ -1351,8 +1345,8 @@ pub fn parse(input: &str) -> Result<Puppetfile, String> {
             if pos == input.len() {
                 Ok(value)
             } else {
-                Err(format!("Expected end of input at {}" , pos_to_line
-                            ( input , pos )))
+                Err(format!("Expected end of input at {}" , pos_to_line (
+                            input , pos )))
             }
         }
         Err(pos) => Err(format!("Error at {}" , pos_to_line ( input , pos ))),
