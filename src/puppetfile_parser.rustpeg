@@ -1,10 +1,8 @@
-{
-  use std::num::from_str_radix;
-  use std::char;
-  use super::*;
-  use semver::VersionReq;
-  use semver;
-}
+use std::num::from_str_radix;
+use std::char;
+use super::*;
+use semver::VersionReq;
+use semver;
 
 #[export]
 parse -> Puppetfile
