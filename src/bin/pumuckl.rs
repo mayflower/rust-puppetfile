@@ -22,7 +22,7 @@ fn main() {
     };
     let file_raw_bytes = match File::open(&path).read_to_end() {
         Ok(bytes)  => bytes,
-        Err(error) => fail!("{}", error)
+        Err(error) => panic!("{}", error)
     };
     let puppetfile_contents = str::from_utf8(file_raw_bytes[]).unwrap();
     let puppetfile = Puppetfile::parse(puppetfile_contents).unwrap();
