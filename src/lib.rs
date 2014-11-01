@@ -1,7 +1,7 @@
 //! This library parses a Puppetfile
 
 #![crate_name = "puppetfile"]
-#![deny(missing_doc)]
+#![deny(missing_docs)]
 #![feature(slicing_syntax)]
 #![feature(globs)]
 
