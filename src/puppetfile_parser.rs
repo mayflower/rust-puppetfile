@@ -5,21 +5,43 @@ use std::char;
 use super::*;
 use semver::VersionReq;
 use semver;
-fn slice_eq(input: &str, pos: uint, m: &str) -> Result<(uint, ()), uint> {
+enum ParseResult<T> { Matched(uint, T), Failed, }
+struct ParseState {
+    max_err_pos: uint,
+    expected: ::std::collections::HashSet<&'static str>,
+}
+impl ParseState {
+    fn new() -> ParseState {
+        ParseState{max_err_pos: 0,
+                   expected: ::std::collections::HashSet::new(),}
+    }
+    fn mark_failure(&mut self, pos: uint, expected: &'static str) ->
+     ParseResult<()> {
+        if pos > self.max_err_pos {
+            self.max_err_pos = pos;
+            self.expected.clear();
+        }
+        if pos == self.max_err_pos { self.expected.insert(expected); }
+        Failed
+    }
+}
+fn slice_eq(input: &str, state: &mut ParseState, pos: uint, m: &'static str)
+ -> ParseResult<()> {
     #![inline]
     #![allow(dead_code)]
     let l = m.len();
     if input.len() >= pos + l &&
            input.as_bytes().slice(pos, pos + l) == m.as_bytes() {
-        Ok((pos + l, ()))
-    } else { Err(pos) }
+        Matched(pos + l, ())
+    } else { state.mark_failure(pos, m) }
 }
-fn any_char(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn any_char(input: &str, state: &mut ParseState, pos: uint) ->
+ ParseResult<()> {
     #![inline]
     #![allow(dead_code)]
     if input.len() > pos {
-        Ok((input.char_range_at(pos).next, ()))
-    } else { Err(pos) }
+        Matched(input.char_range_at(pos).next, ())
+    } else { state.mark_failure(pos, "<character>") }
 }
 fn pos_to_line(input: &str, pos: uint) -> (uint, uint) {
     let mut remaining = pos;
@@ -32,242 +54,248 @@ fn pos_to_line(input: &str, pos: uint) -> (uint, uint) {
     }
     return (lineno, remaining + 1);
 }
-fn parse_parse(input: &str, pos: uint) -> Result<(uint, Puppetfile), uint> {
+fn parse_parse<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<Puppetfile> {
     {
         let start_pos = pos;
         {
-            let seq_res = parse___(input, pos);
+            let seq_res = parse___(input, state, pos);
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
-                        let seq_res = parse_forge(input, pos);
+                        let seq_res = parse_forge(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, forge)) => {
+                            Matched(pos, forge) => {
                                 {
-                                    let seq_res = parse___(input, pos);
+                                    let seq_res = parse___(input, state, pos);
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, _)) => {
+                                        Matched(pos, _) => {
                                             {
                                                 let seq_res =
-                                                    parse_modules(input, pos);
+                                                    parse_modules(input,
+                                                                  state, pos);
                                                 match seq_res {
-                                                    Err(pos) => { Err(pos) }
-                                                    Ok((pos, modules)) => {
+                                                    Matched(pos, modules) => {
                                                         {
                                                             let match_str =
                                                                 input.slice(start_pos,
                                                                             pos);
-                                                            Ok((pos,
-                                                                {
-                                                                    Puppetfile{forge:
-                                                                                   forge,
-                                                                               modules:
-                                                                                   modules,}
-                                                                }))
+                                                            Matched(pos,
+                                                                    {
+                                                                        Puppetfile{forge:
+                                                                                       forge,
+                                                                                   modules:
+                                                                                       modules,}
+                                                                    })
                                                         }
                                                     }
+                                                    Failed => Failed,
                                                 }
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_forge(input: &str, pos: uint) -> Result<(uint, String), uint> {
+fn parse_forge<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<String> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "forge");
+            let seq_res = slice_eq(input, state, pos, "forge");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
-                        let seq_res = parse___(input, pos);
+                        let seq_res = parse___(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
-                                    let seq_res = parse_string(input, pos);
+                                    let seq_res =
+                                        parse_string(input, state, pos);
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, url)) => {
+                                        Matched(pos, url) => {
                                             {
                                                 let match_str =
                                                     input.slice(start_pos,
                                                                 pos);
-                                                Ok((pos, { url }))
+                                                Matched(pos, { url })
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_modules(input: &str, pos: uint) ->
- Result<(uint, Vec<Module>), uint> {
+fn parse_modules<'input>(input: &'input str, state: &mut ParseState,
+                         pos: uint) -> ParseResult<Vec<Module>> {
     {
         let mut repeat_pos = pos;
         let mut repeat_value = vec!();
         loop  {
             let pos = repeat_pos;
-            let step_res = parse_module(input, pos);
+            let step_res = parse_module(input, state, pos);
             match step_res {
-                Ok((newpos, value)) => {
+                Matched(newpos, value) => {
                     repeat_pos = newpos;
                     repeat_value.push(value);
                 }
-                Err(..) => { break ; }
+                Failed => { break ; }
             }
         }
-        Ok((repeat_pos, repeat_value))
+        Matched(repeat_pos, repeat_value)
     }
 }
-fn parse_module(input: &str, pos: uint) -> Result<(uint, Module), uint> {
+fn parse_module<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<Module> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "mod");
+            let seq_res = slice_eq(input, state, pos, "mod");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
-                        let seq_res = parse___(input, pos);
+                        let seq_res = parse___(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
-                                    let seq_res = parse_string(input, pos);
+                                    let seq_res =
+                                        parse_string(input, state, pos);
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, name)) => {
+                                        Matched(pos, name) => {
                                             {
                                                 let seq_res =
-                                                    parse___(input, pos);
+                                                    parse___(input, state,
+                                                             pos);
                                                 match seq_res {
-                                                    Err(pos) => { Err(pos) }
-                                                    Ok((pos, _)) => {
+                                                    Matched(pos, _) => {
                                                         {
                                                             let seq_res =
                                                                 match {
                                                                           let seq_res =
                                                                               slice_eq(input,
+                                                                                       state,
                                                                                        pos,
                                                                                        ",");
                                                                           match seq_res
                                                                               {
-                                                                              Err(pos)
-                                                                              =>
-                                                                              {
-                                                                                  Err(pos)
-                                                                              }
-                                                                              Ok((pos,
-                                                                                  _))
+                                                                              Matched(pos,
+                                                                                      _)
                                                                               =>
                                                                               {
                                                                                   parse___(input,
+                                                                                           state,
                                                                                            pos)
                                                                               }
+                                                                              Failed
+                                                                              =>
+                                                                              Failed,
                                                                           }
                                                                       } {
-                                                                    Ok((newpos,
-                                                                        value))
+                                                                    Matched(newpos,
+                                                                            value)
                                                                     => {
-                                                                        Ok((newpos,
-                                                                            Some(value)))
+                                                                        Matched(newpos,
+                                                                                Some(value))
                                                                     }
-                                                                    Err(..) =>
+                                                                    Failed =>
                                                                     {
-                                                                        Ok((pos,
-                                                                            None))
+                                                                        Matched(pos,
+                                                                                None)
                                                                     }
                                                                 };
                                                             match seq_res {
-                                                                Err(pos) => {
-                                                                    Err(pos)
-                                                                }
-                                                                Ok((pos, _))
-                                                                => {
+                                                                Matched(pos,
+                                                                        _) =>
+                                                                {
                                                                     {
                                                                         let seq_res =
                                                                             parse_module_info(input,
+                                                                                              state,
                                                                                               pos);
                                                                         match seq_res
                                                                             {
-                                                                            Err(pos)
-                                                                            =>
-                                                                            {
-                                                                                Err(pos)
-                                                                            }
-                                                                            Ok((pos,
-                                                                                info))
+                                                                            Matched(pos,
+                                                                                    info)
                                                                             =>
                                                                             {
                                                                                 {
                                                                                     let seq_res =
                                                                                         parse___(input,
+                                                                                                 state,
                                                                                                  pos);
                                                                                     match seq_res
                                                                                         {
-                                                                                        Err(pos)
-                                                                                        =>
-                                                                                        {
-                                                                                            Err(pos)
-                                                                                        }
-                                                                                        Ok((pos,
-                                                                                            _))
+                                                                                        Matched(pos,
+                                                                                                _)
                                                                                         =>
                                                                                         {
                                                                                             {
                                                                                                 let match_str =
                                                                                                     input.slice(start_pos,
                                                                                                                 pos);
-                                                                                                Ok((pos,
-                                                                                                    {
-                                                                                                        Module{name:
-                                                                                                                   name,
-                                                                                                               info:
-                                                                                                                   info,}
-                                                                                                    }))
+                                                                                                Matched(pos,
+                                                                                                        {
+                                                                                                            Module{name:
+                                                                                                                       name,
+                                                                                                                   info:
+                                                                                                                       info,}
+                                                                                                        })
                                                                                             }
                                                                                         }
+                                                                                        Failed
+                                                                                        =>
+                                                                                        Failed,
                                                                                     }
                                                                                 }
                                                                             }
+                                                                            Failed
+                                                                            =>
+                                                                            Failed,
                                                                         }
                                                                     }
                                                                 }
+                                                                Failed =>
+                                                                Failed,
                                                             }
                                                         }
                                                     }
+                                                    Failed => Failed,
                                                 }
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_module_info(input: &str, pos: uint) ->
- Result<(uint, Vec<PuppetModuleInfo>), uint> {
+fn parse_module_info<'input>(input: &'input str, state: &mut ParseState,
+                             pos: uint) ->
+ ParseResult<Vec<PuppetModuleInfo>> {
     {
         let start_pos = pos;
         {
@@ -282,194 +310,200 @@ fn parse_module_info(input: &str, pos: uint) ->
                                 let sep_res =
                                     {
                                         let seq_res =
-                                            slice_eq(input, pos, ",");
+                                            slice_eq(input, state, pos, ",");
                                         match seq_res {
-                                            Err(pos) => { Err(pos) }
-                                            Ok((pos, _)) => {
-                                                parse___(input, pos)
+                                            Matched(pos, _) => {
+                                                parse___(input, state, pos)
                                             }
+                                            Failed => Failed,
                                         }
                                     };
                                 match sep_res {
-                                    Ok((newpos, _)) => { newpos }
-                                    Err(..) => break ,
+                                    Matched(newpos, _) => { newpos }
+                                    Failed => break ,
                                 }
                             } else { pos };
                         let step_res =
                             {
-                                let choice_res = parse_version(input, pos);
+                                let choice_res =
+                                    parse_version(input, state, pos);
                                 match choice_res {
-                                    Ok((pos, value)) => Ok((pos, value)),
-                                    Err(..) => parse_info_hash(input, pos),
+                                    Matched(pos, value) =>
+                                    Matched(pos, value),
+                                    Failed =>
+                                    parse_info_hash(input, state, pos),
                                 }
                             };
                         match step_res {
-                            Ok((newpos, value)) => {
+                            Matched(newpos, value) => {
                                 repeat_pos = newpos;
                                 repeat_value.push(value);
                             }
-                            Err(..) => { break ; }
+                            Failed => { break ; }
                         }
                     }
-                    Ok((repeat_pos, repeat_value))
+                    Matched(repeat_pos, repeat_value)
                 };
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, i)) => {
+                Matched(pos, i) => {
                     {
                         let match_str = input.slice(start_pos, pos);
-                        Ok((pos, { i }))
+                        Matched(pos, { i })
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_version(input: &str, pos: uint) ->
- Result<(uint, PuppetModuleInfo), uint> {
+fn parse_version<'input>(input: &'input str, state: &mut ParseState,
+                         pos: uint) -> ParseResult<PuppetModuleInfo> {
     {
         let start_pos = pos;
         {
-            let seq_res = parse_string(input, pos);
+            let seq_res = parse_string(input, state, pos);
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, version)) => {
+                Matched(pos, version) => {
                     {
-                        let seq_res = parse___(input, pos);
+                        let seq_res = parse___(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos,
-                                        {
-                                            if semver::Version::parse(version[]).is_ok()
-                                               {
-                                                Version(VersionReq::parse(format!("={}"
-                                                                                  ,
-                                                                                  version)[]).unwrap())
-                                            } else {
-                                                Version(VersionReq::parse(version[]).unwrap())
-                                            }
-                                        }))
+                                    Matched(pos,
+                                            {
+                                                if semver::Version::parse(version[]).is_ok()
+                                                   {
+                                                    Version(VersionReq::parse(format!("={}"
+                                                                                      ,
+                                                                                      version)[]).unwrap())
+                                                } else {
+                                                    Version(VersionReq::parse(version[]).unwrap())
+                                                }
+                                            })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_info_hash(input: &str, pos: uint) ->
- Result<(uint, PuppetModuleInfo), uint> {
+fn parse_info_hash<'input>(input: &'input str, state: &mut ParseState,
+                           pos: uint) -> ParseResult<PuppetModuleInfo> {
     {
         let start_pos = pos;
         {
-            let seq_res = parse_symbol(input, pos);
+            let seq_res = parse_symbol(input, state, pos);
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, key)) => {
+                Matched(pos, key) => {
                     {
-                        let seq_res = parse___(input, pos);
+                        let seq_res = parse___(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
-                                    let seq_res = slice_eq(input, pos, "=>");
+                                    let seq_res =
+                                        slice_eq(input, state, pos, "=>");
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, _)) => {
+                                        Matched(pos, _) => {
                                             {
                                                 let seq_res =
-                                                    parse___(input, pos);
+                                                    parse___(input, state,
+                                                             pos);
                                                 match seq_res {
-                                                    Err(pos) => { Err(pos) }
-                                                    Ok((pos, _)) => {
+                                                    Matched(pos, _) => {
                                                         {
                                                             let seq_res =
                                                                 parse_string(input,
+                                                                             state,
                                                                              pos);
                                                             match seq_res {
-                                                                Err(pos) => {
-                                                                    Err(pos)
-                                                                }
-                                                                Ok((pos,
-                                                                    value)) =>
-                                                                {
+                                                                Matched(pos,
+                                                                        value)
+                                                                => {
                                                                     {
                                                                         let seq_res =
                                                                             parse___(input,
+                                                                                     state,
                                                                                      pos);
                                                                         match seq_res
                                                                             {
-                                                                            Err(pos)
-                                                                            =>
-                                                                            {
-                                                                                Err(pos)
-                                                                            }
-                                                                            Ok((pos,
-                                                                                _))
+                                                                            Matched(pos,
+                                                                                    _)
                                                                             =>
                                                                             {
                                                                                 {
                                                                                     let match_str =
                                                                                         input.slice(start_pos,
                                                                                                     pos);
-                                                                                    Ok((pos,
-                                                                                        {
-                                                                                            ModuleInfo(key,
-                                                                                                       value)
-                                                                                        }))
+                                                                                    Matched(pos,
+                                                                                            {
+                                                                                                ModuleInfo(key,
+                                                                                                           value)
+                                                                                            })
                                                                                 }
                                                                             }
+                                                                            Failed
+                                                                            =>
+                                                                            Failed,
                                                                         }
                                                                     }
                                                                 }
+                                                                Failed =>
+                                                                Failed,
                                                             }
                                                         }
                                                     }
+                                                    Failed => Failed,
                                                 }
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_symbol(input: &str, pos: uint) -> Result<(uint, String), uint> {
+fn parse_symbol<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<String> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, ":");
+            let seq_res = slice_eq(input, state, pos, ":");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
-                        let seq_res = parse_identifier(input, pos);
+                        let seq_res = parse_identifier(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, i)) => {
+                            Matched(pos, i) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos, { i }))
+                                    Matched(pos, { i })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_identifier(input: &str, pos: uint) -> Result<(uint, String), uint> {
+fn parse_identifier<'input>(input: &'input str, state: &mut ParseState,
+                            pos: uint) -> ParseResult<String> {
     {
         let start_pos = pos;
         {
@@ -479,15 +513,17 @@ fn parse_identifier(input: &str, pos: uint) -> Result<(uint, String), uint> {
                     {
                         let seq_res =
                             {
-                                let choice_res = parse_letter(input, pos);
+                                let choice_res =
+                                    parse_letter(input, state, pos);
                                 match choice_res {
-                                    Ok((pos, value)) => Ok((pos, value)),
-                                    Err(..) => slice_eq(input, pos, "_"),
+                                    Matched(pos, value) =>
+                                    Matched(pos, value),
+                                    Failed =>
+                                    slice_eq(input, state, pos, "_"),
                                 }
                             };
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
                                     let seq_res =
                                         {
@@ -498,24 +534,28 @@ fn parse_identifier(input: &str, pos: uint) -> Result<(uint, String), uint> {
                                                     {
                                                         let choice_res =
                                                             parse_letter(input,
+                                                                         state,
                                                                          pos);
                                                         match choice_res {
-                                                            Ok((pos, value))
-                                                            =>
-                                                            Ok((pos, value)),
-                                                            Err(..) => {
+                                                            Matched(pos,
+                                                                    value) =>
+                                                            Matched(pos,
+                                                                    value),
+                                                            Failed => {
                                                                 let choice_res =
                                                                     parse_digit(input,
+                                                                                state,
                                                                                 pos);
                                                                 match choice_res
                                                                     {
-                                                                    Ok((pos,
-                                                                        value))
+                                                                    Matched(pos,
+                                                                            value)
                                                                     =>
-                                                                    Ok((pos,
-                                                                        value)),
-                                                                    Err(..) =>
+                                                                    Matched(pos,
+                                                                            value),
+                                                                    Failed =>
                                                                     slice_eq(input,
+                                                                             state,
                                                                              pos,
                                                                              "_"),
                                                                 }
@@ -523,96 +563,100 @@ fn parse_identifier(input: &str, pos: uint) -> Result<(uint, String), uint> {
                                                         }
                                                     };
                                                 match step_res {
-                                                    Ok((newpos, value)) => {
+                                                    Matched(newpos, value) =>
+                                                    {
                                                         repeat_pos = newpos;
                                                     }
-                                                    Err(..) => { break ; }
+                                                    Failed => { break ; }
                                                 }
                                             }
-                                            Ok((repeat_pos, ()))
+                                            Matched(repeat_pos, ())
                                         };
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, _)) => {
+                                        Matched(pos, _) => {
                                             {
                                                 let match_str =
                                                     input.slice(start_pos,
                                                                 pos);
-                                                Ok((pos,
-                                                    {
-                                                        match_str.to_string()
-                                                    }))
+                                                Matched(pos,
+                                                        {
+                                                            match_str.to_string()
+                                                        })
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 };
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, chars)) => {
+                Matched(pos, chars) => {
                     {
-                        let seq_res = parse___(input, pos);
+                        let seq_res = parse___(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos, { chars }))
+                                    Matched(pos, { chars })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_string(input: &str, pos: uint) -> Result<(uint, String), uint> {
+fn parse_string<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<String> {
     {
         let start_pos = pos;
         {
             let seq_res =
                 {
-                    let choice_res = parse_doubleQuotedString(input, pos);
+                    let choice_res =
+                        parse_doubleQuotedString(input, state, pos);
                     match choice_res {
-                        Ok((pos, value)) => Ok((pos, value)),
-                        Err(..) => parse_singleQuotedString(input, pos),
+                        Matched(pos, value) => Matched(pos, value),
+                        Failed => parse_singleQuotedString(input, state, pos),
                     }
                 };
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, string)) => {
+                Matched(pos, string) => {
                     {
-                        let seq_res = parse___(input, pos);
+                        let seq_res = parse___(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos, { string }))
+                                    Matched(pos, { string })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_doubleQuotedString(input: &str, pos: uint) ->
- Result<(uint, String), uint> {
+fn parse_doubleQuotedString<'input>(input: &'input str,
+                                    state: &mut ParseState, pos: uint) ->
+ ParseResult<String> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "\"");
+            let seq_res = slice_eq(input, state, pos, "\"");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
                         let seq_res =
                             {
@@ -622,73 +666,83 @@ fn parse_doubleQuotedString(input: &str, pos: uint) ->
                                     let pos = repeat_pos;
                                     let step_res =
                                         parse_doubleQuotedCharacter(input,
+                                                                    state,
                                                                     pos);
                                     match step_res {
-                                        Ok((newpos, value)) => {
+                                        Matched(newpos, value) => {
                                             repeat_pos = newpos;
                                             repeat_value.push(value);
                                         }
-                                        Err(..) => { break ; }
+                                        Failed => { break ; }
                                     }
                                 }
-                                Ok((repeat_pos, repeat_value))
+                                Matched(repeat_pos, repeat_value)
                             };
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, s)) => {
+                            Matched(pos, s) => {
                                 {
-                                    let seq_res = slice_eq(input, pos, "\"");
+                                    let seq_res =
+                                        slice_eq(input, state, pos, "\"");
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, _)) => {
+                                        Matched(pos, _) => {
                                             {
                                                 let match_str =
                                                     input.slice(start_pos,
                                                                 pos);
-                                                Ok((pos,
-                                                    {
-                                                        String::from_chars(s[])
-                                                    }))
+                                                Matched(pos,
+                                                        {
+                                                            String::from_chars(s[])
+                                                        })
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_doubleQuotedCharacter(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_doubleQuotedCharacter<'input>(input: &'input str,
+                                       state: &mut ParseState, pos: uint) ->
+ ParseResult<char> {
     {
-        let choice_res = parse_simpleDoubleQuotedCharacter(input, pos);
+        let choice_res = parse_simpleDoubleQuotedCharacter(input, state, pos);
         match choice_res {
-            Ok((pos, value)) => Ok((pos, value)),
-            Err(..) => {
-                let choice_res = parse_simpleEscapeSequence(input, pos);
+            Matched(pos, value) => Matched(pos, value),
+            Failed => {
+                let choice_res =
+                    parse_simpleEscapeSequence(input, state, pos);
                 match choice_res {
-                    Ok((pos, value)) => Ok((pos, value)),
-                    Err(..) => {
-                        let choice_res = parse_zeroEscapeSequence(input, pos);
+                    Matched(pos, value) => Matched(pos, value),
+                    Failed => {
+                        let choice_res =
+                            parse_zeroEscapeSequence(input, state, pos);
                         match choice_res {
-                            Ok((pos, value)) => Ok((pos, value)),
-                            Err(..) => {
+                            Matched(pos, value) => Matched(pos, value),
+                            Failed => {
                                 let choice_res =
-                                    parse_hexEscapeSequence(input, pos);
+                                    parse_hexEscapeSequence(input, state,
+                                                            pos);
                                 match choice_res {
-                                    Ok((pos, value)) => Ok((pos, value)),
-                                    Err(..) => {
+                                    Matched(pos, value) =>
+                                    Matched(pos, value),
+                                    Failed => {
                                         let choice_res =
                                             parse_unicodeEscapeSequence(input,
+                                                                        state,
                                                                         pos);
                                         match choice_res {
-                                            Ok((pos, value)) =>
-                                            Ok((pos, value)),
-                                            Err(..) =>
+                                            Matched(pos, value) =>
+                                            Matched(pos, value),
+                                            Failed =>
                                             parse_eolEscapeSequence(input,
+                                                                    state,
                                                                     pos),
                                         }
                                     }
@@ -701,8 +755,9 @@ fn parse_doubleQuotedCharacter(input: &str, pos: uint) ->
         }
     }
 }
-fn parse_simpleDoubleQuotedCharacter(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_simpleDoubleQuotedCharacter<'input>(input: &'input str,
+                                             state: &mut ParseState,
+                                             pos: uint) -> ParseResult<char> {
     {
         let start_pos = pos;
         {
@@ -710,54 +765,57 @@ fn parse_simpleDoubleQuotedCharacter(input: &str, pos: uint) ->
                 {
                     let assert_res =
                         {
-                            let choice_res = slice_eq(input, pos, "\"");
+                            let choice_res =
+                                slice_eq(input, state, pos, "\"");
                             match choice_res {
-                                Ok((pos, value)) => Ok((pos, value)),
-                                Err(..) => {
+                                Matched(pos, value) => Matched(pos, value),
+                                Failed => {
                                     let choice_res =
-                                        slice_eq(input, pos, "\\");
+                                        slice_eq(input, state, pos, "\\");
                                     match choice_res {
-                                        Ok((pos, value)) => Ok((pos, value)),
-                                        Err(..) => parse_eolChar(input, pos),
+                                        Matched(pos, value) =>
+                                        Matched(pos, value),
+                                        Failed =>
+                                        parse_eolChar(input, state, pos),
                                     }
                                 }
                             }
                         };
                     match assert_res {
-                        Err(..) => Ok((pos, ())),
-                        Ok(..) => Err(pos),
+                        Failed => Matched(pos, ()),
+                        Matched(..) => Failed,
                     }
                 };
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
-                        let seq_res = any_char(input, pos);
+                        let seq_res = any_char(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos, { match_str.char_at(0) }))
+                                    Matched(pos, { match_str.char_at(0) })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_singleQuotedString(input: &str, pos: uint) ->
- Result<(uint, String), uint> {
+fn parse_singleQuotedString<'input>(input: &'input str,
+                                    state: &mut ParseState, pos: uint) ->
+ ParseResult<String> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "\'");
+            let seq_res = slice_eq(input, state, pos, "\'");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
                         let seq_res =
                             {
@@ -767,73 +825,83 @@ fn parse_singleQuotedString(input: &str, pos: uint) ->
                                     let pos = repeat_pos;
                                     let step_res =
                                         parse_singleQuotedCharacter(input,
+                                                                    state,
                                                                     pos);
                                     match step_res {
-                                        Ok((newpos, value)) => {
+                                        Matched(newpos, value) => {
                                             repeat_pos = newpos;
                                             repeat_value.push(value);
                                         }
-                                        Err(..) => { break ; }
+                                        Failed => { break ; }
                                     }
                                 }
-                                Ok((repeat_pos, repeat_value))
+                                Matched(repeat_pos, repeat_value)
                             };
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, s)) => {
+                            Matched(pos, s) => {
                                 {
-                                    let seq_res = slice_eq(input, pos, "\'");
+                                    let seq_res =
+                                        slice_eq(input, state, pos, "\'");
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, _)) => {
+                                        Matched(pos, _) => {
                                             {
                                                 let match_str =
                                                     input.slice(start_pos,
                                                                 pos);
-                                                Ok((pos,
-                                                    {
-                                                        String::from_chars(s.as_slice())
-                                                    }))
+                                                Matched(pos,
+                                                        {
+                                                            String::from_chars(s.as_slice())
+                                                        })
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_singleQuotedCharacter(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_singleQuotedCharacter<'input>(input: &'input str,
+                                       state: &mut ParseState, pos: uint) ->
+ ParseResult<char> {
     {
-        let choice_res = parse_simpleSingleQuotedCharacter(input, pos);
+        let choice_res = parse_simpleSingleQuotedCharacter(input, state, pos);
         match choice_res {
-            Ok((pos, value)) => Ok((pos, value)),
-            Err(..) => {
-                let choice_res = parse_simpleEscapeSequence(input, pos);
+            Matched(pos, value) => Matched(pos, value),
+            Failed => {
+                let choice_res =
+                    parse_simpleEscapeSequence(input, state, pos);
                 match choice_res {
-                    Ok((pos, value)) => Ok((pos, value)),
-                    Err(..) => {
-                        let choice_res = parse_zeroEscapeSequence(input, pos);
+                    Matched(pos, value) => Matched(pos, value),
+                    Failed => {
+                        let choice_res =
+                            parse_zeroEscapeSequence(input, state, pos);
                         match choice_res {
-                            Ok((pos, value)) => Ok((pos, value)),
-                            Err(..) => {
+                            Matched(pos, value) => Matched(pos, value),
+                            Failed => {
                                 let choice_res =
-                                    parse_hexEscapeSequence(input, pos);
+                                    parse_hexEscapeSequence(input, state,
+                                                            pos);
                                 match choice_res {
-                                    Ok((pos, value)) => Ok((pos, value)),
-                                    Err(..) => {
+                                    Matched(pos, value) =>
+                                    Matched(pos, value),
+                                    Failed => {
                                         let choice_res =
                                             parse_unicodeEscapeSequence(input,
+                                                                        state,
                                                                         pos);
                                         match choice_res {
-                                            Ok((pos, value)) =>
-                                            Ok((pos, value)),
-                                            Err(..) =>
+                                            Matched(pos, value) =>
+                                            Matched(pos, value),
+                                            Failed =>
                                             parse_eolEscapeSequence(input,
+                                                                    state,
                                                                     pos),
                                         }
                                     }
@@ -846,8 +914,9 @@ fn parse_singleQuotedCharacter(input: &str, pos: uint) ->
         }
     }
 }
-fn parse_simpleSingleQuotedCharacter(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_simpleSingleQuotedCharacter<'input>(input: &'input str,
+                                             state: &mut ParseState,
+                                             pos: uint) -> ParseResult<char> {
     {
         let start_pos = pos;
         {
@@ -855,81 +924,88 @@ fn parse_simpleSingleQuotedCharacter(input: &str, pos: uint) ->
                 {
                     let assert_res =
                         {
-                            let choice_res = slice_eq(input, pos, "\'");
+                            let choice_res =
+                                slice_eq(input, state, pos, "\'");
                             match choice_res {
-                                Ok((pos, value)) => Ok((pos, value)),
-                                Err(..) => {
+                                Matched(pos, value) => Matched(pos, value),
+                                Failed => {
                                     let choice_res =
-                                        slice_eq(input, pos, "\\");
+                                        slice_eq(input, state, pos, "\\");
                                     match choice_res {
-                                        Ok((pos, value)) => Ok((pos, value)),
-                                        Err(..) => parse_eolChar(input, pos),
+                                        Matched(pos, value) =>
+                                        Matched(pos, value),
+                                        Failed =>
+                                        parse_eolChar(input, state, pos),
                                     }
                                 }
                             }
                         };
                     match assert_res {
-                        Err(..) => Ok((pos, ())),
-                        Ok(..) => Err(pos),
+                        Failed => Matched(pos, ()),
+                        Matched(..) => Failed,
                     }
                 };
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
-                        let seq_res = any_char(input, pos);
+                        let seq_res = any_char(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos, { match_str.char_at(0) }))
+                                    Matched(pos, { match_str.char_at(0) })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_simpleEscapeSequence(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_simpleEscapeSequence<'input>(input: &'input str,
+                                      state: &mut ParseState, pos: uint) ->
+ ParseResult<char> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "\\");
+            let seq_res = slice_eq(input, state, pos, "\\");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
                         let seq_res =
                             {
                                 let assert_res =
                                     {
                                         let choice_res =
-                                            parse_digit(input, pos);
+                                            parse_digit(input, state, pos);
                                         match choice_res {
-                                            Ok((pos, value)) =>
-                                            Ok((pos, value)),
-                                            Err(..) => {
+                                            Matched(pos, value) =>
+                                            Matched(pos, value),
+                                            Failed => {
                                                 let choice_res =
-                                                    slice_eq(input, pos, "x");
+                                                    slice_eq(input, state,
+                                                             pos, "x");
                                                 match choice_res {
-                                                    Ok((pos, value)) =>
-                                                    Ok((pos, value)),
-                                                    Err(..) => {
+                                                    Matched(pos, value) =>
+                                                    Matched(pos, value),
+                                                    Failed => {
                                                         let choice_res =
                                                             slice_eq(input,
+                                                                     state,
                                                                      pos,
                                                                      "u");
                                                         match choice_res {
-                                                            Ok((pos, value))
-                                                            =>
-                                                            Ok((pos, value)),
-                                                            Err(..) =>
+                                                            Matched(pos,
+                                                                    value) =>
+                                                            Matched(pos,
+                                                                    value),
+                                                            Failed =>
                                                             parse_eolChar(input,
+                                                                          state,
                                                                           pos),
                                                         }
                                                     }
@@ -938,329 +1014,354 @@ fn parse_simpleEscapeSequence(input: &str, pos: uint) ->
                                         }
                                     };
                                 match assert_res {
-                                    Err(..) => Ok((pos, ())),
-                                    Ok(..) => Err(pos),
+                                    Failed => Matched(pos, ()),
+                                    Matched(..) => Failed,
                                 }
                             };
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
-                                    let seq_res = any_char(input, pos);
+                                    let seq_res = any_char(input, state, pos);
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, _)) => {
+                                        Matched(pos, _) => {
                                             {
                                                 let match_str =
                                                     input.slice(start_pos,
                                                                 pos);
-                                                Ok((pos,
-                                                    {
-                                                        match match_str.char_at(1)
-                                                            {
-                                                            'n' => '\n',
-                                                            'r' => '\r',
-                                                            't' => '\t',
-                                                            x => x,
-                                                        }
-                                                    }))
+                                                Matched(pos,
+                                                        {
+                                                            match match_str.char_at(1)
+                                                                {
+                                                                'n' => '\n',
+                                                                'r' => '\r',
+                                                                't' => '\t',
+                                                                x => x,
+                                                            }
+                                                        })
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_zeroEscapeSequence(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_zeroEscapeSequence<'input>(input: &'input str,
+                                    state: &mut ParseState, pos: uint) ->
+ ParseResult<char> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "\\0");
+            let seq_res = slice_eq(input, state, pos, "\\0");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
                         let seq_res =
                             {
-                                let assert_res = parse_digit(input, pos);
+                                let assert_res =
+                                    parse_digit(input, state, pos);
                                 match assert_res {
-                                    Err(..) => Ok((pos, ())),
-                                    Ok(..) => Err(pos),
+                                    Failed => Matched(pos, ()),
+                                    Matched(..) => Failed,
                                 }
                             };
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, _)) => {
+                            Matched(pos, _) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos, { 0u8 as char }))
+                                    Matched(pos, { 0u8 as char })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_hexEscapeSequence(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_hexEscapeSequence<'input>(input: &'input str, state: &mut ParseState,
+                                   pos: uint) -> ParseResult<char> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "\\x");
+            let seq_res = slice_eq(input, state, pos, "\\x");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
                         let seq_res =
                             {
                                 let start_pos = pos;
                                 {
-                                    let seq_res = parse_hexDigit(input, pos);
+                                    let seq_res =
+                                        parse_hexDigit(input, state, pos);
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, _)) => {
+                                        Matched(pos, _) => {
                                             {
                                                 let seq_res =
                                                     parse_hexDigit(input,
+                                                                   state,
                                                                    pos);
                                                 match seq_res {
-                                                    Err(pos) => { Err(pos) }
-                                                    Ok((pos, _)) => {
+                                                    Matched(pos, _) => {
                                                         {
                                                             let match_str =
                                                                 input.slice(start_pos,
                                                                             pos);
-                                                            Ok((pos,
-                                                                {
-                                                                    from_str_radix::<int>(match_str,
-                                                                                          16)
-                                                                }))
+                                                            Matched(pos,
+                                                                    {
+                                                                        from_str_radix::<int>(match_str,
+                                                                                              16)
+                                                                    })
                                                         }
                                                     }
+                                                    Failed => Failed,
                                                 }
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             };
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, value)) => {
+                            Matched(pos, value) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos,
-                                        {
-                                            char::from_u32(value.unwrap() as
-                                                               u32).unwrap()
-                                        }))
+                                    Matched(pos,
+                                            {
+                                                char::from_u32(value.unwrap()
+                                                                   as
+                                                                   u32).unwrap()
+                                            })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_unicodeEscapeSequence(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_unicodeEscapeSequence<'input>(input: &'input str,
+                                       state: &mut ParseState, pos: uint) ->
+ ParseResult<char> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "\\u");
+            let seq_res = slice_eq(input, state, pos, "\\u");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
                         let seq_res =
                             {
                                 let start_pos = pos;
                                 {
-                                    let seq_res = parse_hexDigit(input, pos);
+                                    let seq_res =
+                                        parse_hexDigit(input, state, pos);
                                     match seq_res {
-                                        Err(pos) => { Err(pos) }
-                                        Ok((pos, _)) => {
+                                        Matched(pos, _) => {
                                             {
                                                 let seq_res =
                                                     parse_hexDigit(input,
+                                                                   state,
                                                                    pos);
                                                 match seq_res {
-                                                    Err(pos) => { Err(pos) }
-                                                    Ok((pos, _)) => {
+                                                    Matched(pos, _) => {
                                                         {
                                                             let seq_res =
                                                                 parse_hexDigit(input,
+                                                                               state,
                                                                                pos);
                                                             match seq_res {
-                                                                Err(pos) => {
-                                                                    Err(pos)
-                                                                }
-                                                                Ok((pos, _))
-                                                                => {
+                                                                Matched(pos,
+                                                                        _) =>
+                                                                {
                                                                     {
                                                                         let seq_res =
                                                                             parse_hexDigit(input,
+                                                                                           state,
                                                                                            pos);
                                                                         match seq_res
                                                                             {
-                                                                            Err(pos)
-                                                                            =>
-                                                                            {
-                                                                                Err(pos)
-                                                                            }
-                                                                            Ok((pos,
-                                                                                _))
+                                                                            Matched(pos,
+                                                                                    _)
                                                                             =>
                                                                             {
                                                                                 {
                                                                                     let match_str =
                                                                                         input.slice(start_pos,
                                                                                                     pos);
-                                                                                    Ok((pos,
-                                                                                        {
-                                                                                            from_str_radix::<int>(match_str,
-                                                                                                                  16)
-                                                                                        }))
+                                                                                    Matched(pos,
+                                                                                            {
+                                                                                                from_str_radix::<int>(match_str,
+                                                                                                                      16)
+                                                                                            })
                                                                                 }
                                                                             }
+                                                                            Failed
+                                                                            =>
+                                                                            Failed,
                                                                         }
                                                                     }
                                                                 }
+                                                                Failed =>
+                                                                Failed,
                                                             }
                                                         }
                                                     }
+                                                    Failed => Failed,
                                                 }
                                             }
                                         }
+                                        Failed => Failed,
                                     }
                                 }
                             };
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, value)) => {
+                            Matched(pos, value) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos,
-                                        {
-                                            char::from_u32(value.unwrap() as
-                                                               u32).unwrap()
-                                        }))
+                                    Matched(pos,
+                                            {
+                                                char::from_u32(value.unwrap()
+                                                                   as
+                                                                   u32).unwrap()
+                                            })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_eolEscapeSequence(input: &str, pos: uint) ->
- Result<(uint, char), uint> {
+fn parse_eolEscapeSequence<'input>(input: &'input str, state: &mut ParseState,
+                                   pos: uint) -> ParseResult<char> {
     {
         let start_pos = pos;
         {
-            let seq_res = slice_eq(input, pos, "\\");
+            let seq_res = slice_eq(input, state, pos, "\\");
             match seq_res {
-                Err(pos) => { Err(pos) }
-                Ok((pos, _)) => {
+                Matched(pos, _) => {
                     {
-                        let seq_res = parse_eol(input, pos);
+                        let seq_res = parse_eol(input, state, pos);
                         match seq_res {
-                            Err(pos) => { Err(pos) }
-                            Ok((pos, eol)) => {
+                            Matched(pos, eol) => {
                                 {
                                     let match_str =
                                         input.slice(start_pos, pos);
-                                    Ok((pos, { '\n' }))
+                                    Matched(pos, { '\n' })
                                 }
                             }
+                            Failed => Failed,
                         }
                     }
                 }
+                Failed => Failed,
             }
         }
     }
 }
-fn parse_digit(input: &str, pos: uint) -> Result<(uint, ()), uint> {
-    if input.len() > pos {
-        let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
-        match ch { '0' ...'9' => Ok((next, ())), _ => Err(pos), }
-    } else { Err(pos) }
-}
-fn parse_hexDigit(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse_digit<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<()> {
     if input.len() > pos {
         let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch {
-            '0' ...'9' | 'a' ...'f' | 'A' ...'F' => Ok((next, ())),
-            _ => Err(pos),
+            '0' ...'9' => Matched(next, ()),
+            _ => state.mark_failure(pos, "[0-9]"),
         }
-    } else { Err(pos) }
+    } else { state.mark_failure(pos, "[0-9]") }
 }
-fn parse_letter(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse_hexDigit<'input>(input: &'input str, state: &mut ParseState,
+                          pos: uint) -> ParseResult<()> {
+    if input.len() > pos {
+        let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
+        match ch {
+            '0' ...'9' | 'a' ...'f' | 'A' ...'F' => Matched(next, ()),
+            _ => state.mark_failure(pos, "[0-9a-fA-F]"),
+        }
+    } else { state.mark_failure(pos, "[0-9a-fA-F]") }
+}
+fn parse_letter<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<()> {
     {
-        let choice_res = parse_lowerCaseLetter(input, pos);
+        let choice_res = parse_lowerCaseLetter(input, state, pos);
         match choice_res {
-            Ok((pos, value)) => Ok((pos, value)),
-            Err(..) => parse_upperCaseLetter(input, pos),
+            Matched(pos, value) => Matched(pos, value),
+            Failed => parse_upperCaseLetter(input, state, pos),
         }
     }
 }
-fn parse_lowerCaseLetter(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse_lowerCaseLetter<'input>(input: &'input str, state: &mut ParseState,
+                                 pos: uint) -> ParseResult<()> {
     if input.len() > pos {
         let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
-        match ch { 'a' ...'z' => Ok((next, ())), _ => Err(pos), }
-    } else { Err(pos) }
+        match ch {
+            'a' ...'z' => Matched(next, ()),
+            _ => state.mark_failure(pos, "[a-z]"),
+        }
+    } else { state.mark_failure(pos, "[a-z]") }
 }
-fn parse_upperCaseLetter(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse_upperCaseLetter<'input>(input: &'input str, state: &mut ParseState,
+                                 pos: uint) -> ParseResult<()> {
     if input.len() > pos {
         let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
-        match ch { 'A' ...'Z' => Ok((next, ())), _ => Err(pos), }
-    } else { Err(pos) }
+        match ch {
+            'A' ...'Z' => Matched(next, ()),
+            _ => state.mark_failure(pos, "[A-Z]"),
+        }
+    } else { state.mark_failure(pos, "[A-Z]") }
 }
-fn parse___(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse___<'input>(input: &'input str, state: &mut ParseState, pos: uint) ->
+ ParseResult<()> {
     {
         let mut repeat_pos = pos;
         loop  {
             let pos = repeat_pos;
             let step_res =
                 {
-                    let choice_res = parse_whitespace(input, pos);
+                    let choice_res = parse_whitespace(input, state, pos);
                     match choice_res {
-                        Ok((pos, value)) => Ok((pos, value)),
-                        Err(..) => {
-                            let choice_res = parse_eol(input, pos);
+                        Matched(pos, value) => Matched(pos, value),
+                        Failed => {
+                            let choice_res = parse_eol(input, state, pos);
                             match choice_res {
-                                Ok((pos, value)) => Ok((pos, value)),
-                                Err(..) => parse_comment(input, pos),
+                                Matched(pos, value) => Matched(pos, value),
+                                Failed => parse_comment(input, state, pos),
                             }
                         }
                     }
                 };
             match step_res {
-                Ok((newpos, value)) => { repeat_pos = newpos; }
-                Err(..) => { break ; }
+                Matched(newpos, value) => { repeat_pos = newpos; }
+                Failed => { break ; }
             }
         }
-        Ok((repeat_pos, ()))
+        Matched(repeat_pos, ())
     }
 }
-fn parse_comment(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse_comment<'input>(input: &'input str, state: &mut ParseState,
+                         pos: uint) -> ParseResult<()> {
     {
-        let seq_res = slice_eq(input, pos, "#");
+        let seq_res = slice_eq(input, state, pos, "#");
         match seq_res {
-            Err(pos) => { Err(pos) }
-            Ok((pos, _)) => {
+            Matched(pos, _) => {
                 {
                     let mut repeat_pos = pos;
                     loop  {
@@ -1270,47 +1371,53 @@ fn parse_comment(input: &str, pos: uint) -> Result<(uint, ()), uint> {
                                 let seq_res =
                                     {
                                         let assert_res =
-                                            parse_eolChar(input, pos);
+                                            parse_eolChar(input, state, pos);
                                         match assert_res {
-                                            Err(..) => Ok((pos, ())),
-                                            Ok(..) => Err(pos),
+                                            Failed => Matched(pos, ()),
+                                            Matched(..) => Failed,
                                         }
                                     };
                                 match seq_res {
-                                    Err(pos) => { Err(pos) }
-                                    Ok((pos, _)) => { any_char(input, pos) }
+                                    Matched(pos, _) => {
+                                        any_char(input, state, pos)
+                                    }
+                                    Failed => Failed,
                                 }
                             };
                         match step_res {
-                            Ok((newpos, value)) => { repeat_pos = newpos; }
-                            Err(..) => { break ; }
+                            Matched(newpos, value) => { repeat_pos = newpos; }
+                            Failed => { break ; }
                         }
                     }
-                    Ok((repeat_pos, ()))
+                    Matched(repeat_pos, ())
                 }
             }
+            Failed => Failed,
         }
     }
 }
-fn parse_eol(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse_eol<'input>(input: &'input str, state: &mut ParseState, pos: uint) ->
+ ParseResult<()> {
     {
-        let choice_res = slice_eq(input, pos, "\n");
+        let choice_res = slice_eq(input, state, pos, "\n");
         match choice_res {
-            Ok((pos, value)) => Ok((pos, value)),
-            Err(..) => {
-                let choice_res = slice_eq(input, pos, "\r\n");
+            Matched(pos, value) => Matched(pos, value),
+            Failed => {
+                let choice_res = slice_eq(input, state, pos, "\r\n");
                 match choice_res {
-                    Ok((pos, value)) => Ok((pos, value)),
-                    Err(..) => {
-                        let choice_res = slice_eq(input, pos, "\r");
+                    Matched(pos, value) => Matched(pos, value),
+                    Failed => {
+                        let choice_res = slice_eq(input, state, pos, "\r");
                         match choice_res {
-                            Ok((pos, value)) => Ok((pos, value)),
-                            Err(..) => {
+                            Matched(pos, value) => Matched(pos, value),
+                            Failed => {
                                 let choice_res =
-                                    slice_eq(input, pos, "\u2028");
+                                    slice_eq(input, state, pos, "\u2028");
                                 match choice_res {
-                                    Ok((pos, value)) => Ok((pos, value)),
-                                    Err(..) => slice_eq(input, pos, "\u2029"),
+                                    Matched(pos, value) =>
+                                    Matched(pos, value),
+                                    Failed =>
+                                    slice_eq(input, state, pos, "\u2029"),
                                 }
                             }
                         }
@@ -1320,35 +1427,39 @@ fn parse_eol(input: &str, pos: uint) -> Result<(uint, ()), uint> {
         }
     }
 }
-fn parse_eolChar(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse_eolChar<'input>(input: &'input str, state: &mut ParseState,
+                         pos: uint) -> ParseResult<()> {
     if input.len() > pos {
         let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch {
-            '\n' | '\r' | '\u2028' | '\u2029' => Ok((next, ())),
-            _ => Err(pos),
+            '\n' | '\r' | '\u2028' | '\u2029' => Matched(next, ()),
+            _ => state.mark_failure(pos, "[\n\r\u2028\u2029]"),
         }
-    } else { Err(pos) }
+    } else { state.mark_failure(pos, "[\n\r\u2028\u2029]") }
 }
-fn parse_whitespace(input: &str, pos: uint) -> Result<(uint, ()), uint> {
+fn parse_whitespace<'input>(input: &'input str, state: &mut ParseState,
+                            pos: uint) -> ParseResult<()> {
     if input.len() > pos {
         let ::std::str::CharRange { ch, next } = input.char_range_at(pos);
         match ch {
-            ' ' | '\t' | '\xa0' | '\ufeff' | '\u1680' | '\u180e' | '\u2000'
-            ...'\u200a' | '\u202f' | '\u205f' | '\u3000' => Ok((next, ())),
-            _ => Err(pos),
+            ' ' | '\t' | '\u00a0' | '\ufeff' | '\u1680' | '\u180e' | '\u2000'
+            ...'\u200a' | '\u202f' | '\u205f' | '\u3000' => Matched(next, ()),
+            _ =>
+            state.mark_failure(pos,
+                               "[ \t\u00a0\ufeff\u1680\u180e\u2000-\u200a\u202f\u205f\u3000]"),
         }
-    } else { Err(pos) }
-}
-pub fn parse(input: &str) -> Result<Puppetfile, String> {
-    match parse_parse(input, 0) {
-        Ok((pos, value)) => {
-            if pos == input.len() {
-                Ok(value)
-            } else {
-                Err(format!("Expected end of input at {}" , pos_to_line (
-                            input , pos )))
-            }
-        }
-        Err(pos) => Err(format!("Error at {}" , pos_to_line ( input , pos ))),
+    } else {
+        state.mark_failure(pos,
+                           "[ \t\u00a0\ufeff\u1680\u180e\u2000-\u200a\u202f\u205f\u3000]")
     }
+}
+pub fn parse<'input>(input: &'input str) -> Result<Puppetfile, String> {
+    let mut state = ParseState::new();
+    match parse_parse(input, &mut state, 0) {
+        Matched(pos, value) => { if pos == input.len() { return Ok(value) } }
+        _ => { }
+    }
+    let expected = state.expected.to_string().escape_default();
+    Err(format!("Error at {}: Expected {}" , pos_to_line (
+                input , state . max_err_pos ) , expected))
 }
