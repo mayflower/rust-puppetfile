@@ -1,4 +1,4 @@
-use super::{Puppetfile, Module, ModuleInfo, Version};
+use super::{Puppetfile, Module, ModuleInfo};
 use semver::{mod, VersionReq};
 
 #[test]
@@ -51,7 +51,7 @@ mod 'mayflower/php', '1.0.1'
     assert_eq!(
         Module {
             name: String::from_str("mayflower/php"),
-            info: vec![Version(VersionReq::parse("= 1.0.1").unwrap())]
+            info: vec![ModuleInfo::Version(VersionReq::parse("= 1.0.1").unwrap())]
         },
         parsed.modules[0]
     );
@@ -75,8 +75,8 @@ mod 'mayflower/php',
         Module {
             name: String::from_str("mayflower/php"),
             info: vec![
-                ModuleInfo(String::from_str("git"),
-                           String::from_str("git://github.com/Mayflower/puppet-php.git"))
+                ModuleInfo::Info(String::from_str("git"),
+                                 String::from_str("git://github.com/Mayflower/puppet-php.git"))
             ]
         },
         parsed.modules[0]
@@ -85,10 +85,10 @@ mod 'mayflower/php',
 
 #[test]
 fn format() {
-    let version = Version(VersionReq::parse("= 1.0.0").unwrap());
+    let version = ModuleInfo::Version(VersionReq::parse("= 1.0.0").unwrap());
     assert_eq!(String::from_str("= 1.0.0"), format!("{}", version));
 
-    let mod_info = ModuleInfo(
+    let mod_info = ModuleInfo::Info(
         String::from_str("git"),
         String::from_str("git://github.com/Mayflower/puppet-php.git")
     );

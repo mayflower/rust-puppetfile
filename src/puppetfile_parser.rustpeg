@@ -19,20 +19,20 @@ module -> Module
   = "mod" __ name:string __ ("," __)? info:module_info __
   { Module { name: name, info: info } }
 
-module_info -> Vec<PuppetModuleInfo>
+module_info -> Vec<ModuleInfo>
   = i:((version / info_hash) ** ("," __)) { i }
 
-version -> PuppetModuleInfo
+version -> ModuleInfo
   = version:string __ {
     if semver::Version::parse(version[]).is_ok() {
-        Version(VersionReq::parse(format!("={}", version)[]).unwrap())
+        ModuleInfo::Version(VersionReq::parse(format!("={}", version)[]).unwrap())
     } else {
-        Version(VersionReq::parse(version[]).unwrap())
+        ModuleInfo::Version(VersionReq::parse(version[]).unwrap())
     }
 }
 
-info_hash -> PuppetModuleInfo
-  = key:symbol __ "=>" __ value:string __ { ModuleInfo(key, value) }
+info_hash -> ModuleInfo
+  = key:symbol __ "=>" __ value:string __ { ModuleInfo::Info(key, value) }
 
 symbol -> String
   = ":" i:identifier { i }

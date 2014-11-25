@@ -54,7 +54,7 @@ pub struct Module {
     /// Name of the module
     pub name: String,
     /// More information about the module
-    pub info: Vec<PuppetModuleInfo>
+    pub info: Vec<ModuleInfo>
 }
 
 #[deriving(Decodable)]
@@ -117,8 +117,8 @@ impl Module {
     pub fn version(&self) -> Option<&VersionReq> {
         for info in self.info.iter() {
             match *info {
-                Version(ref v) => return Some(v),
-                ModuleInfo(..) => ()
+                ModuleInfo::Version(ref v) => return Some(v),
+                ModuleInfo::Info(..) => ()
             }
         }
         None
@@ -129,8 +129,8 @@ impl fmt::Show for Module {
         let res = write!(f, "mod '{}'", self.name);
         self.info.iter().fold(res, |prev_res, mod_info| {
             match *mod_info {
-                Version(..) => prev_res.and(write!(f, ", '{}'", mod_info)),
-                ModuleInfo(..) => prev_res.and(write!(f, ",\n  {}", mod_info)),
+                ModuleInfo::Version(..) => prev_res.and(write!(f, ", '{}'", mod_info)),
+                ModuleInfo::Info(..) => prev_res.and(write!(f, ",\n  {}", mod_info)),
             }
         })
     }
@@ -139,27 +139,27 @@ impl fmt::Show for Module {
 
 /// Further Information on Puppet Modules
 #[deriving(PartialEq, Clone)]
-pub enum PuppetModuleInfo {
+pub enum ModuleInfo {
     /// Version as String
     Version(VersionReq),
     /// Key Value based Information
-    ModuleInfo(String, String)
+    Info(String, String)
 }
-impl PuppetModuleInfo {
+impl ModuleInfo {
     /// Returns `true` if the option is a `Version` value
     pub fn is_version(&self) -> bool {
         match *self {
-            Version(..)    => true,
-            ModuleInfo(..) => false
+            ModuleInfo::Version(..)    => true,
+            ModuleInfo::Info(..) => false
         }
     }
 }
 
-impl fmt::Show for PuppetModuleInfo {
+impl fmt::Show for ModuleInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Version(ref v) => write!(f, "{}", v),
-            ModuleInfo(ref k, ref v) => write!(f, ":{} => '{}'", k, v)
+            ModuleInfo::Version(ref v) => write!(f, "{}", v),
+            ModuleInfo::Info(ref k, ref v) => write!(f, ":{} => '{}'", k, v)
         }
     }
 }

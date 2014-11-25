@@ -5,6 +5,7 @@ use std::char;
 use super::*;
 use semver::VersionReq;
 use semver;
+use self::ParseResult::*;
 enum ParseResult<T> { Matched(uint, T), Failed, }
 struct ParseState {
     max_err_pos: uint,
@@ -15,8 +16,8 @@ impl ParseState {
         ParseState{max_err_pos: 0,
                    expected: ::std::collections::HashSet::new(),}
     }
-    fn mark_failure(&mut self, pos: uint, expected: &'static str) ->
-     ParseResult<()> {
+    fn mark_failure(&mut self, pos: uint, expected: &'static str)
+     -> ParseResult<()> {
         if pos > self.max_err_pos {
             self.max_err_pos = pos;
             self.expected.clear();
@@ -35,8 +36,8 @@ fn slice_eq(input: &str, state: &mut ParseState, pos: uint, m: &'static str)
         Matched(pos + l, ())
     } else { state.mark_failure(pos, m) }
 }
-fn any_char(input: &str, state: &mut ParseState, pos: uint) ->
- ParseResult<()> {
+fn any_char(input: &str, state: &mut ParseState, pos: uint)
+ -> ParseResult<()> {
     #![inline]
     #![allow(dead_code)]
     if input.len() > pos {
@@ -294,8 +295,7 @@ fn parse_module<'input>(input: &'input str, state: &mut ParseState, pos: uint)
     }
 }
 fn parse_module_info<'input>(input: &'input str, state: &mut ParseState,
-                             pos: uint) ->
- ParseResult<Vec<PuppetModuleInfo>> {
+                             pos: uint) -> ParseResult<Vec<ModuleInfo>> {
     {
         let start_pos = pos;
         {
@@ -357,7 +357,7 @@ fn parse_module_info<'input>(input: &'input str, state: &mut ParseState,
     }
 }
 fn parse_version<'input>(input: &'input str, state: &mut ParseState,
-                         pos: uint) -> ParseResult<PuppetModuleInfo> {
+                         pos: uint) -> ParseResult<ModuleInfo> {
     {
         let start_pos = pos;
         {
@@ -375,11 +375,11 @@ fn parse_version<'input>(input: &'input str, state: &mut ParseState,
                                             {
                                                 if semver::Version::parse(version[]).is_ok()
                                                    {
-                                                    Version(VersionReq::parse(format!("={}"
-                                                                                      ,
-                                                                                      version)[]).unwrap())
+                                                    ModuleInfo::Version(VersionReq::parse(format!("={}"
+                                                                                                  ,
+                                                                                                  version)[]).unwrap())
                                                 } else {
-                                                    Version(VersionReq::parse(version[]).unwrap())
+                                                    ModuleInfo::Version(VersionReq::parse(version[]).unwrap())
                                                 }
                                             })
                                 }
@@ -394,7 +394,7 @@ fn parse_version<'input>(input: &'input str, state: &mut ParseState,
     }
 }
 fn parse_info_hash<'input>(input: &'input str, state: &mut ParseState,
-                           pos: uint) -> ParseResult<PuppetModuleInfo> {
+                           pos: uint) -> ParseResult<ModuleInfo> {
     {
         let start_pos = pos;
         {
@@ -442,8 +442,8 @@ fn parse_info_hash<'input>(input: &'input str, state: &mut ParseState,
                                                                                                     pos);
                                                                                     Matched(pos,
                                                                                             {
-                                                                                                ModuleInfo(key,
-                                                                                                           value)
+                                                                                                ModuleInfo::Info(key,
+                                                                                                                 value)
                                                                                             })
                                                                                 }
                                                                             }
@@ -649,8 +649,8 @@ fn parse_string<'input>(input: &'input str, state: &mut ParseState, pos: uint)
     }
 }
 fn parse_doubleQuotedString<'input>(input: &'input str,
-                                    state: &mut ParseState, pos: uint) ->
- ParseResult<String> {
+                                    state: &mut ParseState, pos: uint)
+ -> ParseResult<String> {
     {
         let start_pos = pos;
         {
@@ -709,8 +709,8 @@ fn parse_doubleQuotedString<'input>(input: &'input str,
     }
 }
 fn parse_doubleQuotedCharacter<'input>(input: &'input str,
-                                       state: &mut ParseState, pos: uint) ->
- ParseResult<char> {
+                                       state: &mut ParseState, pos: uint)
+ -> ParseResult<char> {
     {
         let choice_res = parse_simpleDoubleQuotedCharacter(input, state, pos);
         match choice_res {
@@ -808,8 +808,8 @@ fn parse_simpleDoubleQuotedCharacter<'input>(input: &'input str,
     }
 }
 fn parse_singleQuotedString<'input>(input: &'input str,
-                                    state: &mut ParseState, pos: uint) ->
- ParseResult<String> {
+                                    state: &mut ParseState, pos: uint)
+ -> ParseResult<String> {
     {
         let start_pos = pos;
         {
@@ -868,8 +868,8 @@ fn parse_singleQuotedString<'input>(input: &'input str,
     }
 }
 fn parse_singleQuotedCharacter<'input>(input: &'input str,
-                                       state: &mut ParseState, pos: uint) ->
- ParseResult<char> {
+                                       state: &mut ParseState, pos: uint)
+ -> ParseResult<char> {
     {
         let choice_res = parse_simpleSingleQuotedCharacter(input, state, pos);
         match choice_res {
@@ -967,8 +967,8 @@ fn parse_simpleSingleQuotedCharacter<'input>(input: &'input str,
     }
 }
 fn parse_simpleEscapeSequence<'input>(input: &'input str,
-                                      state: &mut ParseState, pos: uint) ->
- ParseResult<char> {
+                                      state: &mut ParseState, pos: uint)
+ -> ParseResult<char> {
     {
         let start_pos = pos;
         {
@@ -1054,8 +1054,8 @@ fn parse_simpleEscapeSequence<'input>(input: &'input str,
     }
 }
 fn parse_zeroEscapeSequence<'input>(input: &'input str,
-                                    state: &mut ParseState, pos: uint) ->
- ParseResult<char> {
+                                    state: &mut ParseState, pos: uint)
+ -> ParseResult<char> {
     {
         let start_pos = pos;
         {
@@ -1155,8 +1155,8 @@ fn parse_hexEscapeSequence<'input>(input: &'input str, state: &mut ParseState,
     }
 }
 fn parse_unicodeEscapeSequence<'input>(input: &'input str,
-                                       state: &mut ParseState, pos: uint) ->
- ParseResult<char> {
+                                       state: &mut ParseState, pos: uint)
+ -> ParseResult<char> {
     {
         let start_pos = pos;
         {
@@ -1328,8 +1328,8 @@ fn parse_upperCaseLetter<'input>(input: &'input str, state: &mut ParseState,
         }
     } else { state.mark_failure(pos, "[A-Z]") }
 }
-fn parse___<'input>(input: &'input str, state: &mut ParseState, pos: uint) ->
- ParseResult<()> {
+fn parse___<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<()> {
     {
         let mut repeat_pos = pos;
         loop  {
@@ -1396,8 +1396,8 @@ fn parse_comment<'input>(input: &'input str, state: &mut ParseState,
         }
     }
 }
-fn parse_eol<'input>(input: &'input str, state: &mut ParseState, pos: uint) ->
- ParseResult<()> {
+fn parse_eol<'input>(input: &'input str, state: &mut ParseState, pos: uint)
+ -> ParseResult<()> {
     {
         let choice_res = slice_eq(input, state, pos, "\n");
         match choice_res {
