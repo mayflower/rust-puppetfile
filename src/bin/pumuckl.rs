@@ -1,7 +1,6 @@
 #![feature(slicing_syntax)]
 
 extern crate puppetfile;
-extern crate http;
 extern crate serialize;
 extern crate semver;
 
@@ -32,7 +31,7 @@ fn main() {
         |m| m.user_name_pair().is_some()
     ).map(|m| {
         let forge_url = puppetfile.forge.clone();
-        Future::spawn(proc() {
+        Future::spawn(move || {
             (m.name.clone(), m.forge_version(&forge_url))
         })
     }).collect();

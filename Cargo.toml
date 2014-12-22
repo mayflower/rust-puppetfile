@@ -1,15 +1,17 @@
 [package]
 
 name = "puppetfile"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["Robin Gloster <robin.gloster@mayflower.de>"]
+license = "MIT"
+description = "Puppetfile parser"
+#documentation = "..."
+homepage = "https://github.com/Mayflower/rust-puppetfile"
+repository = "https://github.com/Mayflower/rust-puppetfile"
+readme = "README.md"
+keywords = ["puppetfile", "parser", "r10k"]
 
-
-[dependencies.http]
-git = "https://github.com/chris-morgan/rust-http"
-
-[dependencies.semver]
-git = "https://github.com/rust-lang/semver"
-
-[dependencies.url]
-git = "https://github.com/servo/rust-url"
+[dependencies]
+semver = "0.1.3"
+url = "0.2.6"
+hyper = "0.0.16"

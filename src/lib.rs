@@ -5,7 +5,7 @@
 #![feature(slicing_syntax)]
 #![feature(globs)]
 
-extern crate http;
+extern crate hyper;
 extern crate serialize;
 extern crate semver;
 extern crate url;
@@ -13,8 +13,7 @@ extern crate url;
 use std::fmt;
 use serialize::json;
 use semver::VersionReq;
-use http::client::RequestWriter;
-use http::method::Get;
+use hyper::Client;
 use url::Url;
 
 mod puppetfile_parser;
@@ -71,10 +70,7 @@ impl Module {
     /// The current version of the module returned from the forge API
     pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, ForgeVersionError> {
         let url = try!(self.version_url(forge_url));
-        let request: RequestWriter = try!(RequestWriter::new(Get, url).map_err(|err|
-            ForgeVersionError(format!("{}", err))
-        ));
-        let mut response = try!(request.read_response().map_err(|(_, err)|
+        let mut response = try!(Client::new().get(url).send().map_err(|err|
             ForgeVersionError(format!("{}", err))
         ));
         let response_string = try!(response.read_to_string().map_err(|err|
