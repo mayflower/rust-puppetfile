@@ -126,13 +126,8 @@ mod 'mayflower/php', '= 1.0.0',
 fn version_url() {
     let module = Module { name: String::from_str("mayflower/php"), info: vec![] };
     assert_eq!(
-        "https://forge.puppetlabs.com/users/mayflower/modules/php/releases/find.json",
-        format!(
-            "{}",
-            module.version_url(
-                &"https://forge.puppetlabs.com/".to_string()
-            ).unwrap()
-        )[]
+        Ok("https://forge.puppetlabs.com/users/mayflower/modules/php/releases/find.json".to_string()),
+        module.version_url(&"https://forge.puppetlabs.com/".to_string())
     )
 }
 

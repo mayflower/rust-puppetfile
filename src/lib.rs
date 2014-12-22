@@ -8,13 +8,16 @@
 extern crate hyper;
 extern crate serialize;
 extern crate semver;
-extern crate url;
 
+use std::error::{Error, FromError};
 use std::fmt;
+use std::io;
+
+use hyper::Client;
 use serialize::json;
 use semver::VersionReq;
-use hyper::Client;
-use url::Url;
+
+use ErrorKind::*;
 
 mod puppetfile_parser;
 
@@ -61,42 +64,111 @@ struct ForgeVersionResponse {
     version: String
 }
 
+/// represents the type of error of a PuppetfileError
+#[deriving(Clone, PartialEq, Show)]
+pub enum ErrorKind {
+    /// an HTTP error
+    HttpError(hyper::HttpError),
+    /// an IO error
+    IoError(io::IoError),
+    /// an error while parsing the version
+    SemverError(semver::ParseError),
+    /// an error while parsing JSON
+    JsonError(json::DecoderError),
+    /// an error while building the forge URL
+    UrlBuilding,
+}
 /// represents an error while checking the version published on the forge
-#[deriving(Clone, Show)]
-pub struct ForgeVersionError(String);
+#[deriving(Clone, PartialEq, Show)]
+pub struct PuppetfileError {
+    /// type of the error
+    pub kind: ErrorKind,
+    /// short description
+    pub desc: String,
+    /// optional, more detailed description
+    pub detail: Option<String>
+}
+
+impl FromError<hyper::HttpError> for PuppetfileError {
+    fn from_error(err: hyper::HttpError) -> PuppetfileError {
+        FromError::from_error((HttpError(err), "an HTTP error occured".to_string()))
+    }
+}
+
+impl FromError<io::IoError> for PuppetfileError {
+    fn from_error(err: io::IoError) -> PuppetfileError {
+        FromError::from_error((IoError(err), "an IO error occured".to_string()))
+    }
+}
+
+impl FromError<semver::ParseError> for PuppetfileError {
+    fn from_error(err: semver::ParseError) -> PuppetfileError {
+        FromError::from_error((SemverError(err), "an invalid version was given".to_string()))
+    }
+}
+
+impl FromError<json::DecoderError> for PuppetfileError {
+    fn from_error(err: json::DecoderError) -> PuppetfileError {
+        FromError::from_error((JsonError(err), "an error occured while decoding JSON".to_string()))
+    }
+}
+
+impl FromError<(ErrorKind, String)> for PuppetfileError {
+    fn from_error((kind, desc): (ErrorKind, String)) -> PuppetfileError {
+        PuppetfileError {
+            kind: kind,
+            desc: desc,
+            detail: None,
+        }
+    }
+}
+
+
+impl Error for PuppetfileError {
+    fn description(&self) -> &str {
+        self.desc[]
+    }
+
+    fn detail(&self) -> Option<String> {
+        self.detail.clone()
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        match self.kind {
+            JsonError(ref err) => Some(err as &Error),
+            HttpError(ref err) => Some(err as &Error),
+            IoError(ref err) => Some(err as &Error),
+            //SemverError(ref err) => Some(err as &Error),
+            _ => None
+        }
+    }
+}
 
 #[experimental]
 impl Module {
     /// The current version of the module returned from the forge API
-    pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, ForgeVersionError> {
+    pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, PuppetfileError> {
         let url = try!(self.version_url(forge_url));
-        let mut response = try!(Client::new().get(url).send().map_err(|err|
-            ForgeVersionError(format!("{}", err))
-        ));
-        let response_string = try!(response.read_to_string().map_err(|err|
-            ForgeVersionError(format!("{}", err))
-        ));
-        let version_struct: ForgeVersionResponse = try!(json::decode(response_string[]).map_err(|err|
-            ForgeVersionError(format!("{}", err))
-        ));
-        semver::Version::parse(version_struct.version[]).map_err(|err|
-            ForgeVersionError(format!("{}", err))
-        )
+        let mut response = try!(Client::new().get(url[]).send());
+        let response_string = try!(response.read_to_string());
+        let version_struct: ForgeVersionResponse = try!(json::decode(response_string[]));
+        let version = try!(semver::Version::parse(version_struct.version[]));
+
+        Ok(version)
     }
 
     /// Builds the URL for the forge API for fetching the version
-    pub fn version_url(&self, forge_url: &String) -> Result<Url, ForgeVersionError> {
+    pub fn version_url(&self, forge_url: &String) -> Result<String, PuppetfileError> {
         let stripped_url = match forge_url[].ends_with("/") {
             true => forge_url[..forge_url.len() - 1],
             _    => forge_url[]
         };
         let (user, mod_name) = match self.user_name_pair() {
             Some((user, mod_name)) => (user, mod_name),
-            None => return Err(ForgeVersionError("Could not build url".to_string()))
+            None => return Err(FromError::from_error((UrlBuilding, "Could not build url".to_string())))
         };
-        Url::parse(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name)[]).map_err(|err|
-            ForgeVersionError(format!("{}", err))
-        )
+
+        Ok(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name))
     }
 
     /// Returns user and module name from 'user/mod_name'
