@@ -8,13 +8,14 @@
 extern crate hyper;
 extern crate serialize;
 extern crate semver;
+extern crate "rustc-serialize" as rustc_serialize;
 
 use std::error::{Error, FromError};
 use std::fmt;
 use std::io;
 
 use hyper::Client;
-use serialize::json;
+use rustc_serialize::json;
 use semver::VersionReq;
 
 use ErrorKind::*;
@@ -59,7 +60,7 @@ pub struct Module {
     pub info: Vec<ModuleInfo>
 }
 
-#[deriving(Decodable)]
+#[deriving(RustcDecodable)]
 struct ForgeVersionResponse {
     version: String
 }
