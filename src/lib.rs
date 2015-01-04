@@ -26,7 +26,7 @@ mod puppetfile_parser;
 mod test;
 
 /// This represents a Puppetfile
-#[deriving(PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 #[experimental]
 pub struct Puppetfile {
     /// The forge URL
@@ -51,7 +51,7 @@ impl fmt::Show for Puppetfile {
 
 
 /// The representation of a puppet module
-#[deriving(PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 #[experimental]
 pub struct Module {
     /// Name of the module
@@ -60,13 +60,13 @@ pub struct Module {
     pub info: Vec<ModuleInfo>
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct ForgeVersionResponse {
     version: String
 }
 
 /// represents the type of error of a PuppetfileError
-#[deriving(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Show)]
 pub enum ErrorKind {
     /// an HTTP error
     HttpError(hyper::HttpError),
@@ -80,7 +80,7 @@ pub enum ErrorKind {
     UrlBuilding,
 }
 /// represents an error while checking the version published on the forge
-#[deriving(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Show)]
 pub struct PuppetfileError {
     /// type of the error
     pub kind: ErrorKind,
@@ -207,7 +207,7 @@ impl fmt::Show for Module {
 
 
 /// Further Information on Puppet Modules
-#[deriving(PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum ModuleInfo {
     /// Version as String
     Version(VersionReq),
