@@ -1,10 +1,14 @@
+pub use self::parser::parse;
+
+peg! parser(r##"
 use std::num::from_str_radix;
 use std::char;
-use super::*;
+use std::str;
+use super::super::*;
 use semver::VersionReq;
 use semver;
 
-#[export]
+#[pub]
 parse -> Puppetfile
   = __ forge:forge __ modules:modules
   { Puppetfile{ forge: forge, modules: modules } }
@@ -44,7 +48,7 @@ string -> String
   = string:(doubleQuotedString / singleQuotedString) __ { string }
 
 doubleQuotedString -> String
-  = '"' s:doubleQuotedCharacter* '"' { String::from_chars(s[]) }
+  = '"' s:doubleQuotedCharacter* '"' { s.into_iter().collect() }
 
 doubleQuotedCharacter -> char
   = simpleDoubleQuotedCharacter
@@ -58,7 +62,7 @@ simpleDoubleQuotedCharacter -> char
   = !('"' / "\\" / eolChar) . { match_str.char_at(0) }
 
 singleQuotedString -> String
-  = "'" s:singleQuotedCharacter* "'" { String::from_chars(s.as_slice()) }
+  = "'" s:singleQuotedCharacter* "'" { s.into_iter().collect() }
 
 singleQuotedCharacter -> char
   = simpleSingleQuotedCharacter
@@ -133,4 +137,4 @@ eolChar
 
 whitespace
   = [ \t\u{00A0}\u{FEFF}\u{1680}\u{180E}\u{2000}-\u{200A}\u{202F}\u{205F}\u{3000}]
-
+"##);

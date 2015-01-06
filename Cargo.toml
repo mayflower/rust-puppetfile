@@ -14,6 +14,10 @@ keywords = ["puppetfile", "parser", "r10k"]
 [dependencies]
 semver = "0.1.6"
 url = "0.2.8"
-hyper = "0.0.20"
+hyper = "0.0.21"
 log = "0.1.4"
-rustc-serialize = "0.2.2"
+rustc-serialize = "0.2.4"
+# peg = "0.1.2"
+
+[dependencies.peg]
+path = "../rust-peg"

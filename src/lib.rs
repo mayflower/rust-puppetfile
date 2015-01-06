@@ -2,11 +2,12 @@
 
 #![crate_name = "puppetfile"]
 #![deny(missing_docs)]
-#![feature(slicing_syntax)]
-#![feature(globs)]
+#![feature(phase, slicing_syntax, globs)]
+
+#[phase(plugin)]
+extern crate peg_syntax_ext;
 
 extern crate hyper;
-extern crate serialize;
 extern crate semver;
 extern crate "rustc-serialize" as rustc_serialize;
 
@@ -20,7 +21,7 @@ use semver::VersionReq;
 
 use ErrorKind::*;
 
-mod puppetfile_parser;
+mod grammar;
 
 #[cfg(test)]
 mod test;
@@ -39,7 +40,7 @@ pub struct Puppetfile {
 impl Puppetfile {
     /// Try parsing the contents of a Puppetfile into a Puppetfile struct
     pub fn parse(contents: &str) -> Result<Puppetfile, String> {
-        puppetfile_parser::parse(contents)
+        grammar::parse(contents)
     }
 }
 impl fmt::Show for Puppetfile {

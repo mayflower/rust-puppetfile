@@ -1,5 +1,5 @@
 use super::{Puppetfile, Module, ModuleInfo};
-use semver::{mod, VersionReq};
+use semver::{self, VersionReq};
 
 #[test]
 fn empty_file() {
