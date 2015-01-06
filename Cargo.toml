@@ -20,4 +20,4 @@ rustc-serialize = "0.2.4"
 # peg = "0.1.2"
 
 [dependencies.peg]
-path = "../rust-peg"
+git = "git://github.com/kevinmehall/rust-peg"
