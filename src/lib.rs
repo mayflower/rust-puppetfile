@@ -2,10 +2,9 @@
 
 #![crate_name = "puppetfile"]
 #![deny(missing_docs)]
-#![feature(phase, slicing_syntax, globs)]
+#![feature(plugin, slicing_syntax)]
 
-#[phase(plugin)]
-extern crate peg_syntax_ext;
+#[plugin] extern crate peg_syntax_ext;
 
 extern crate hyper;
 extern crate semver;
