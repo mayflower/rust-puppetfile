@@ -28,10 +28,10 @@ module_info -> Vec<ModuleInfo>
 
 version -> ModuleInfo
   = version:string __ {
-    if semver::Version::parse(version[]).is_ok() {
-        ModuleInfo::Version(VersionReq::parse(format!("={}", version)[]).unwrap())
+    if semver::Version::parse(&version[]).is_ok() {
+        ModuleInfo::Version(VersionReq::parse(&format!("={}", version)[]).unwrap())
     } else {
-        ModuleInfo::Version(VersionReq::parse(version[]).unwrap())
+        ModuleInfo::Version(VersionReq::parse(&version[]).unwrap())
     }
 }
 
@@ -92,12 +92,12 @@ zeroEscapeSequence -> char
   = "\\0" !digit { 0u8 as char }
 
 hexEscapeSequence -> char
-  = "\\x" value:(hexDigit hexDigit { from_str_radix::<int>(match_str, 16) }) {
+  = "\\x" value:(hexDigit hexDigit { from_str_radix::<u32>(match_str, 16) }) {
       char::from_u32(value.unwrap() as u32).unwrap()
     }
 
 unicodeEscapeSequence -> char
-  = "\\u" value:(hexDigit hexDigit hexDigit hexDigit { from_str_radix::<int>(match_str, 16)}) {
+  = "\\u" value:(hexDigit hexDigit hexDigit hexDigit { from_str_radix::<u32>(match_str, 16)}) {
       char::from_u32(value.unwrap() as u32).unwrap()
     }
 

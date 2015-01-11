@@ -1,7 +1,7 @@
 [package]
 
 name = "puppetfile"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Robin Gloster <robin.gloster@mayflower.de>"]
 license = "MIT"
 description = "Puppetfile parser"
@@ -17,7 +17,4 @@ url = "0.2.8"
 hyper = "0.0.21"
 log = "0.1.4"
 rustc-serialize = "0.2.4"
-# peg = "0.1.2"
-
-[dependencies.peg]
-git = "git://github.com/kevinmehall/rust-peg"
+peg = "0.1.3"

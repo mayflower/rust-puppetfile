@@ -3,6 +3,7 @@
 #![crate_name = "puppetfile"]
 #![deny(missing_docs)]
 #![feature(plugin, slicing_syntax)]
+#![allow(unstabl)]
 
 #[plugin] extern crate peg_syntax_ext;
 
@@ -26,7 +27,7 @@ mod grammar;
 mod test;
 
 /// This represents a Puppetfile
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Show)]
 #[experimental]
 pub struct Puppetfile {
     /// The forge URL
@@ -42,7 +43,7 @@ impl Puppetfile {
         grammar::parse(contents)
     }
 }
-impl fmt::Show for Puppetfile {
+impl fmt::String for Puppetfile {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let res = write!(f, "forge '{}'\n\n", self.forge);
         self.modules.iter().fold(res, |prev_res, module| { prev_res.and(write!(f, "\n{}\n", module)) })
@@ -51,7 +52,7 @@ impl fmt::Show for Puppetfile {
 
 
 /// The representation of a puppet module
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Show)]
 #[experimental]
 pub struct Module {
     /// Name of the module
@@ -127,7 +128,7 @@ impl FromError<(ErrorKind, String)> for PuppetfileError {
 
 impl Error for PuppetfileError {
     fn description(&self) -> &str {
-        self.desc[]
+        &self.desc[]
     }
 
     fn detail(&self) -> Option<String> {
@@ -150,10 +151,10 @@ impl Module {
     /// The current version of the module returned from the forge API
     pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, PuppetfileError> {
         let url = try!(self.version_url(forge_url));
-        let mut response = try!(Client::new().get(url[]).send());
+        let mut response = try!(Client::new().get(&url[]).send());
         let response_string = try!(response.read_to_string());
-        let version_struct: ForgeVersionResponse = try!(json::decode(response_string[]));
-        let version = try!(semver::Version::parse(version_struct.version[]));
+        let version_struct: ForgeVersionResponse = try!(json::decode(&response_string[]));
+        let version = try!(semver::Version::parse(&version_struct.version[]));
 
         Ok(version)
     }
@@ -161,8 +162,8 @@ impl Module {
     /// Builds the URL for the forge API for fetching the version
     pub fn version_url(&self, forge_url: &String) -> Result<String, PuppetfileError> {
         let stripped_url = match forge_url[].ends_with("/") {
-            true => forge_url[..forge_url.len() - 1],
-            _    => forge_url[]
+            true => &forge_url[..forge_url.len() - 1],
+            _    => &forge_url[]
         };
         let (user, mod_name) = match self.user_name_pair() {
             Some((user, mod_name)) => (user, mod_name),
@@ -193,7 +194,7 @@ impl Module {
         None
     }
 }
-impl fmt::Show for Module {
+impl fmt::String for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let res = write!(f, "mod '{}'", self.name);
         self.info.iter().fold(res, |prev_res, mod_info| {
@@ -207,7 +208,7 @@ impl fmt::Show for Module {
 
 
 /// Further Information on Puppet Modules
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Show)]
 pub enum ModuleInfo {
     /// Version as String
     Version(VersionReq),
@@ -224,7 +225,7 @@ impl ModuleInfo {
     }
 }
 
-impl fmt::Show for ModuleInfo {
+impl fmt::String for ModuleInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ModuleInfo::Version(ref v) => write!(f, "{}", v),
