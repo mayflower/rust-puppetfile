@@ -4,7 +4,7 @@ extern crate puppetfile;
 extern crate serialize;
 extern crate semver;
 
-use std::io::File;
+use std::old_io::File;
 use std::os;
 use std::str;
 use std::sync::Future;

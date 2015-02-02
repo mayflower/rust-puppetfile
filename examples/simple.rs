@@ -1,6 +1,6 @@
 extern crate puppetfile;
 
-use std::io::File;
+use std::old_io::File;
 use std::os;
 use std::str;
 use puppetfile::Puppetfile;

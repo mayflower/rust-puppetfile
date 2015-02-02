@@ -13,7 +13,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 
 use std::error::{Error, FromError};
 use std::fmt;
-use std::io;
+use std::old_io;
 
 use hyper::Client;
 use rustc_serialize::json;
@@ -27,7 +27,7 @@ mod grammar;
 mod test;
 
 /// This represents a Puppetfile
-#[derive(PartialEq, Clone, Show)]
+#[derive(PartialEq, Clone, Debug)]
 #[experimental]
 pub struct Puppetfile {
     /// The forge URL
@@ -52,7 +52,7 @@ impl fmt::String for Puppetfile {
 
 
 /// The representation of a puppet module
-#[derive(PartialEq, Clone, Show)]
+#[derive(PartialEq, Clone, Debug)]
 #[experimental]
 pub struct Module {
     /// Name of the module
@@ -67,12 +67,12 @@ struct ForgeVersionResponse {
 }
 
 /// represents the type of error of a PuppetfileError
-#[derive(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum ErrorKind {
     /// an HTTP error
     HttpError(hyper::HttpError),
     /// an IO error
-    IoError(io::IoError),
+    IoError(old_io::IoError),
     /// an error while parsing the version
     SemverError(semver::ParseError),
     /// an error while parsing JSON
@@ -81,7 +81,7 @@ pub enum ErrorKind {
     UrlBuilding,
 }
 /// represents an error while checking the version published on the forge
-#[derive(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct PuppetfileError {
     /// type of the error
     pub kind: ErrorKind,
@@ -91,14 +91,20 @@ pub struct PuppetfileError {
     pub detail: Option<String>
 }
 
+impl fmt::Display for PuppetfileError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{:?}", self)
+    }
+}
+
 impl FromError<hyper::HttpError> for PuppetfileError {
     fn from_error(err: hyper::HttpError) -> PuppetfileError {
         FromError::from_error((HttpError(err), "an HTTP error occured".to_string()))
     }
 }
 
-impl FromError<io::IoError> for PuppetfileError {
-    fn from_error(err: io::IoError) -> PuppetfileError {
+impl FromError<old_io::IoError> for PuppetfileError {
+    fn from_error(err: old_io::IoError) -> PuppetfileError {
         FromError::from_error((IoError(err), "an IO error occured".to_string()))
     }
 }
@@ -129,10 +135,6 @@ impl FromError<(ErrorKind, String)> for PuppetfileError {
 impl Error for PuppetfileError {
     fn description(&self) -> &str {
         &self.desc[]
-    }
-
-    fn detail(&self) -> Option<String> {
-        self.detail.clone()
     }
 
     fn cause(&self) -> Option<&Error> {
@@ -208,7 +210,7 @@ impl fmt::String for Module {
 
 
 /// Further Information on Puppet Modules
-#[derive(PartialEq, Clone, Show)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum ModuleInfo {
     /// Version as String
     Version(VersionReq),
