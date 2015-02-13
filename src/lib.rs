@@ -3,9 +3,8 @@
 #![crate_name = "puppetfile"]
 #![deny(missing_docs)]
 #![feature(plugin, slicing_syntax)]
-#![allow(unstabl)]
 
-#[plugin] extern crate peg_syntax_ext;
+#![plugin(peg_syntax_ext)]
 
 extern crate hyper;
 extern crate semver;
@@ -28,7 +27,6 @@ mod test;
 
 /// This represents a Puppetfile
 #[derive(PartialEq, Clone, Debug)]
-#[experimental]
 pub struct Puppetfile {
     /// The forge URL
     pub forge: String,
@@ -36,14 +34,13 @@ pub struct Puppetfile {
     pub modules: Vec<Module>
 }
 
-#[experimental]
 impl Puppetfile {
     /// Try parsing the contents of a Puppetfile into a Puppetfile struct
     pub fn parse(contents: &str) -> Result<Puppetfile, String> {
         grammar::parse(contents)
     }
 }
-impl fmt::String for Puppetfile {
+impl fmt::Display for Puppetfile {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let res = write!(f, "forge '{}'\n\n", self.forge);
         self.modules.iter().fold(res, |prev_res, module| { prev_res.and(write!(f, "\n{}\n", module)) })
@@ -53,7 +50,6 @@ impl fmt::String for Puppetfile {
 
 /// The representation of a puppet module
 #[derive(PartialEq, Clone, Debug)]
-#[experimental]
 pub struct Module {
     /// Name of the module
     pub name: String,
@@ -148,10 +144,9 @@ impl Error for PuppetfileError {
     }
 }
 
-#[experimental]
 impl Module {
     /// The current version of the module returned from the forge API
-    pub fn forge_version(&self, forge_url: &String) -> Result<semver::Version, PuppetfileError> {
+    pub fn forge_version(&self, forge_url: &str) -> Result<semver::Version, PuppetfileError> {
         let url = try!(self.version_url(forge_url));
         let mut response = try!(Client::new().get(&url[]).send());
         let response_string = try!(response.read_to_string());
@@ -162,7 +157,7 @@ impl Module {
     }
 
     /// Builds the URL for the forge API for fetching the version
-    pub fn version_url(&self, forge_url: &String) -> Result<String, PuppetfileError> {
+    pub fn version_url(&self, forge_url: &str) -> Result<String, PuppetfileError> {
         let stripped_url = match forge_url[].ends_with("/") {
             true => &forge_url[..forge_url.len() - 1],
             _    => &forge_url[]
@@ -196,7 +191,7 @@ impl Module {
         None
     }
 }
-impl fmt::String for Module {
+impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let res = write!(f, "mod '{}'", self.name);
         self.info.iter().fold(res, |prev_res, mod_info| {
@@ -227,7 +222,7 @@ impl ModuleInfo {
     }
 }
 
-impl fmt::String for ModuleInfo {
+impl fmt::Display for ModuleInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ModuleInfo::Version(ref v) => write!(f, "{}", v),

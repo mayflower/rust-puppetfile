@@ -1,7 +1,6 @@
 #![feature(slicing_syntax)]
 
 extern crate puppetfile;
-extern crate serialize;
 extern crate semver;
 
 use std::old_io::File;
@@ -45,7 +44,7 @@ fn main() {
         }
     ).collect();
 
-    let mut modules_to_check = puppetfile.modules.iter().filter(
+    let modules_to_check = puppetfile.modules.iter().filter(
         |m| m.user_name_pair().is_some() && m.version().is_some()
     );
 

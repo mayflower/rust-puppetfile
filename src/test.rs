@@ -7,7 +7,7 @@ fn empty_file() {
     assert!(puppetfile.is_ok());
     let parsed = puppetfile.unwrap();
     assert_eq!(
-        String::from_str("https://forge.puppetlabs.com"),
+        "https://forge.puppetlabs.com",
         parsed.forge
     );
     assert_eq!(
@@ -26,11 +26,11 @@ mod 'mayflower/php'
 
     let parsed = puppetfile.unwrap();
     assert_eq!(
-        String::from_str("https://forge.puppetlabs.com"),
+        "https://forge.puppetlabs.com",
         parsed.forge
     );
     assert_eq!(
-        Module { name: String::from_str("mayflower/php"), info: vec![] },
+        Module { name: "mayflower/php".to_string(), info: vec![] },
         parsed.modules[0]
     );
 }
@@ -45,12 +45,12 @@ mod 'mayflower/php', '1.0.1'
 
     let parsed = puppetfile.unwrap();
     assert_eq!(
-        String::from_str("https://forge.puppetlabs.com"),
+        "https://forge.puppetlabs.com",
         parsed.forge
     );
     assert_eq!(
         Module {
-            name: String::from_str("mayflower/php"),
+            name: "mayflower/php".to_string(),
             info: vec![ModuleInfo::Version(VersionReq::parse("= 1.0.1").unwrap())]
         },
         parsed.modules[0]
@@ -68,15 +68,15 @@ mod 'mayflower/php',
 
     let parsed = puppetfile.unwrap();
     assert_eq!(
-        String::from_str("https://forge.puppetlabs.com"),
+        "https://forge.puppetlabs.com",
         parsed.forge
     );
     assert_eq!(
         Module {
-            name: String::from_str("mayflower/php"),
+            name: "mayflower/php".to_string(),
             info: vec![
-                ModuleInfo::Info(String::from_str("git"),
-                                 String::from_str("git://github.com/Mayflower/puppet-php.git"))
+                ModuleInfo::Info("git".to_string(),
+                                 "git://github.com/Mayflower/puppet-php.git".to_string())
             ]
         },
         parsed.modules[0]
@@ -89,57 +89,57 @@ fn format() {
     assert_eq!(String::from_str("= 1.0.0"), format!("{}", version));
 
     let mod_info = ModuleInfo::Info(
-        String::from_str("git"),
-        String::from_str("git://github.com/Mayflower/puppet-php.git")
+        "git".to_string(),
+        "git://github.com/Mayflower/puppet-php.git".to_string()
     );
     assert_eq!(
-        String::from_str(":git => 'git://github.com/Mayflower/puppet-php.git'"),
+        ":git => 'git://github.com/Mayflower/puppet-php.git'",
         format!("{}", mod_info)
     );
 
     let module = Module {
-        name: String::from_str("mayflower/php"),
+        name: "mayflower/php".to_string(),
         info: vec![version, mod_info]
     };
     assert_eq!(
-        String::from_str("mod 'mayflower/php', '= 1.0.0',
-  :git => 'git://github.com/Mayflower/puppet-php.git'"),
+        "mod 'mayflower/php', '= 1.0.0',
+  :git => 'git://github.com/Mayflower/puppet-php.git'",
         format!("{}", module)
     );
 
     let puppetfile = Puppetfile {
-        forge: String::from_str("https://forge.puppetlabs.com"),
+        forge: "https://forge.puppetlabs.com".to_string(),
         modules: vec![module]
     };
     assert_eq!(
-        String::from_str("forge 'https://forge.puppetlabs.com'
+        "forge 'https://forge.puppetlabs.com'
 
 
 mod 'mayflower/php', '= 1.0.0',
   :git => 'git://github.com/Mayflower/puppet-php.git'
-"),
+",
         format!("{}", puppetfile)
     );
 }
 
 #[test]
 fn version_url() {
-    let module = Module { name: String::from_str("mayflower/php"), info: vec![] };
+    let module = Module { name: "mayflower/php".to_string(), info: vec![] };
     assert_eq!(
         Ok("https://forge.puppetlabs.com/users/mayflower/modules/php/releases/find.json".to_string()),
-        module.version_url(&"https://forge.puppetlabs.com/".to_string())
+        module.version_url("https://forge.puppetlabs.com/")
     )
 }
 
 #[test]
 fn user_name_pair() {
-    let module = Module { name: String::from_str("mayflower/php"), info: vec![] };
+    let module = Module { name: "mayflower/php".to_string(), info: vec![] };
     assert_eq!(module.user_name_pair(), Some(("mayflower", "php")))
 }
 
 #[test]
 fn forge_version() {
-    let module = Module { name: String::from_str("puppetlabs/nginx"), info: vec![] };
+    let module = Module { name: "puppetlabs/nginx".to_string(), info: vec![] };
     assert_eq!(
         module.forge_version(&"https://forge.puppetlabs.com/".to_string()).unwrap(),
         semver::Version::parse("99.99.99").unwrap()
