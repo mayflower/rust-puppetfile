@@ -28,10 +28,10 @@ module_info -> Vec<ModuleInfo>
 
 version -> ModuleInfo
   = version:string __ {
-    if semver::Version::parse(&version[]).is_ok() {
-        ModuleInfo::Version(VersionReq::parse(&format!("={}", version)[]).unwrap())
+    if semver::Version::parse(&version).is_ok() {
+        ModuleInfo::Version(VersionReq::parse(&format!("={}", version)).unwrap())
     } else {
-        ModuleInfo::Version(VersionReq::parse(&version[]).unwrap())
+        ModuleInfo::Version(VersionReq::parse(&version).unwrap())
     }
 }
 

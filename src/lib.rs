@@ -2,7 +2,7 @@
 
 #![crate_name = "puppetfile"]
 #![deny(missing_docs)]
-#![feature(plugin, slicing_syntax)]
+#![feature(plugin)]
 
 #![plugin(peg_syntax_ext)]
 
@@ -130,7 +130,7 @@ impl FromError<(ErrorKind, String)> for PuppetfileError {
 
 impl Error for PuppetfileError {
     fn description(&self) -> &str {
-        &self.desc[]
+        &self.desc
     }
 
     fn cause(&self) -> Option<&Error> {
@@ -148,19 +148,19 @@ impl Module {
     /// The current version of the module returned from the forge API
     pub fn forge_version(&self, forge_url: &str) -> Result<semver::Version, PuppetfileError> {
         let url = try!(self.version_url(forge_url));
-        let mut response = try!(Client::new().get(&url[]).send());
+        let mut response = try!(Client::new().get(&url[..]).send());
         let response_string = try!(response.read_to_string());
-        let version_struct: ForgeVersionResponse = try!(json::decode(&response_string[]));
-        let version = try!(semver::Version::parse(&version_struct.version[]));
+        let version_struct: ForgeVersionResponse = try!(json::decode(&response_string));
+        let version = try!(semver::Version::parse(&version_struct.version));
 
         Ok(version)
     }
 
     /// Builds the URL for the forge API for fetching the version
     pub fn version_url(&self, forge_url: &str) -> Result<String, PuppetfileError> {
-        let stripped_url = match forge_url[].ends_with("/") {
+        let stripped_url = match forge_url.ends_with("/") {
             true => &forge_url[..forge_url.len() - 1],
-            _    => &forge_url[]
+            _    => &forge_url[..]
         };
         let (user, mod_name) = match self.user_name_pair() {
             Some((user, mod_name)) => (user, mod_name),
@@ -172,8 +172,8 @@ impl Module {
 
     /// Returns user and module name from 'user/mod_name'
     pub fn user_name_pair(&self) -> Option<(&str, &str)> {
-        if self.name[].contains("/") {
-            let mut parts = self.name[].split('/');
+        if self.name.contains("/") {
+            let mut parts = self.name.split('/');
             Some((parts.next().unwrap(), parts.next().unwrap()))
         } else {
             None
