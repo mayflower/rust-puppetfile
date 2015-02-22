@@ -1,7 +1,7 @@
 [package]
 
 name = "puppetfile"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Robin Gloster <robin.gloster@mayflower.de>"]
 license = "MIT"
 description = "Puppetfile parser"
