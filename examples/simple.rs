@@ -6,7 +6,6 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use std::str;
 use puppetfile::Puppetfile;
 
 fn main() {
