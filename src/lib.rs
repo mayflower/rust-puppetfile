@@ -12,7 +12,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 
 use std::error::{Error, FromError};
 use std::fmt;
-use std::old_io;
+use std::io::{self, Read};
 
 use hyper::Client;
 use rustc_serialize::json;
@@ -68,7 +68,7 @@ pub enum ErrorKind {
     /// an HTTP error
     HttpError(hyper::HttpError),
     /// an IO error
-    IoError(old_io::IoError),
+    IoError(io::Error),
     /// an error while parsing the version
     SemverError(semver::ParseError),
     /// an error while parsing JSON
@@ -99,8 +99,8 @@ impl FromError<hyper::HttpError> for PuppetfileError {
     }
 }
 
-impl FromError<old_io::IoError> for PuppetfileError {
-    fn from_error(err: old_io::IoError) -> PuppetfileError {
+impl FromError<io::Error> for PuppetfileError {
+    fn from_error(err: io::Error) -> PuppetfileError {
         FromError::from_error((IoError(err), "an IO error occured".to_string()))
     }
 }
@@ -149,7 +149,8 @@ impl Module {
     pub fn forge_version(&self, forge_url: &str) -> Result<semver::Version, PuppetfileError> {
         let url = try!(self.version_url(forge_url));
         let mut response = try!(Client::new().get(&url[..]).send());
-        let response_string = try!(response.read_to_string());
+        let mut response_string = String::new();
+        try!(response.read_to_string(&mut response_string));
         let version_struct: ForgeVersionResponse = try!(json::decode(&response_string));
         let version = try!(semver::Version::parse(&version_struct.version));
 
