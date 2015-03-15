@@ -1,4 +1,4 @@
-pub use self::parser::parse;
+pub use self::parser::{ParseError, parse};
 
 peg! parser(r##"
 use std::num::from_str_radix;

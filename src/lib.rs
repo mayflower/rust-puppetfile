@@ -36,8 +36,8 @@ pub struct Puppetfile {
 
 impl Puppetfile {
     /// Try parsing the contents of a Puppetfile into a Puppetfile struct
-    pub fn parse(contents: &str) -> Result<Puppetfile, String> {
-        grammar::parse(contents)
+    pub fn parse(contents: &str) -> Result<Puppetfile, PuppetfileError> {
+        Ok(try!(grammar::parse(contents)))
     }
 }
 impl fmt::Display for Puppetfile {
@@ -63,7 +63,7 @@ struct ForgeVersionResponse {
 }
 
 /// represents the type of error of a PuppetfileError
-#[derive(Clone, PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ErrorKind {
     /// an HTTP error
     HttpError(hyper::HttpError),
@@ -75,16 +75,16 @@ pub enum ErrorKind {
     JsonError(json::DecoderError),
     /// an error while building the forge URL
     UrlBuilding,
+    /// an HTTP error
+    ParseError(grammar::ParseError),
 }
 /// represents an error while checking the version published on the forge
-#[derive(Clone, PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct PuppetfileError {
     /// type of the error
     pub kind: ErrorKind,
     /// short description
     pub desc: String,
-    /// optional, more detailed description
-    pub detail: Option<String>
 }
 
 impl fmt::Display for PuppetfileError {
@@ -111,6 +111,12 @@ impl FromError<semver::ParseError> for PuppetfileError {
     }
 }
 
+impl FromError<grammar::ParseError> for PuppetfileError {
+    fn from_error(err: grammar::ParseError) -> PuppetfileError {
+        FromError::from_error((ParseError(err), "could not parse the Puppetfile".to_string()))
+    }
+}
+
 impl FromError<json::DecoderError> for PuppetfileError {
     fn from_error(err: json::DecoderError) -> PuppetfileError {
         FromError::from_error((JsonError(err), "an error occured while decoding JSON".to_string()))
@@ -122,7 +128,6 @@ impl FromError<(ErrorKind, String)> for PuppetfileError {
         PuppetfileError {
             kind: kind,
             desc: desc,
-            detail: None,
         }
     }
 }
@@ -138,7 +143,8 @@ impl Error for PuppetfileError {
             JsonError(ref err) => Some(err as &Error),
             HttpError(ref err) => Some(err as &Error),
             IoError(ref err) => Some(err as &Error),
-            //SemverError(ref err) => Some(err as &Error),
+            SemverError(ref err) => Some(err as &Error),
+            ParseError(ref err) => Some(err as &Error),
             _ => None
         }
     }

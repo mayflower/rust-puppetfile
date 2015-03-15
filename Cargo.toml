@@ -12,7 +12,7 @@ readme = "README.md"
 keywords = ["puppetfile", "parser", "r10k"]
 
 [dependencies]
-semver = "0.1.13"
+semver = "0.1.16"
 url = "0.2.17"
 hyper = "0.3.0"
 log = "0.2.1"

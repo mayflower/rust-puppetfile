@@ -1,5 +1,3 @@
-#![feature(env, fs, io, path)]
-
 extern crate puppetfile;
 
 use std::env;
