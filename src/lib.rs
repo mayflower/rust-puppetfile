@@ -1,16 +1,11 @@
 //! This library parses a Puppetfile
-
-#![crate_name = "puppetfile"]
 #![deny(missing_docs)]
-#![feature(plugin)]
-
-#![plugin(peg_syntax_ext)]
 
 extern crate hyper;
 extern crate semver;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
-use std::error::{Error, FromError};
+use std::error::Error;
 use std::fmt;
 use std::io::{self, Read};
 
@@ -63,10 +58,10 @@ struct ForgeVersionResponse {
 }
 
 /// represents the type of error of a PuppetfileError
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Debug)]
 pub enum ErrorKind {
     /// an HTTP error
-    HttpError(hyper::HttpError),
+    HttpError(hyper::Error),
     /// an IO error
     IoError(io::Error),
     /// an error while parsing the version
@@ -79,7 +74,7 @@ pub enum ErrorKind {
     ParseError(grammar::ParseError),
 }
 /// represents an error while checking the version published on the forge
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Debug)]
 pub struct PuppetfileError {
     /// type of the error
     pub kind: ErrorKind,
@@ -93,38 +88,38 @@ impl fmt::Display for PuppetfileError {
     }
 }
 
-impl FromError<hyper::HttpError> for PuppetfileError {
-    fn from_error(err: hyper::HttpError) -> PuppetfileError {
-        FromError::from_error((HttpError(err), "an HTTP error occured".to_string()))
+impl From<hyper::Error> for PuppetfileError {
+    fn from(err: hyper::Error) -> PuppetfileError {
+        From::from((HttpError(err), "an HTTP error occured".to_string()))
     }
 }
 
-impl FromError<io::Error> for PuppetfileError {
-    fn from_error(err: io::Error) -> PuppetfileError {
-        FromError::from_error((IoError(err), "an IO error occured".to_string()))
+impl From<io::Error> for PuppetfileError {
+    fn from(err: io::Error) -> PuppetfileError {
+        From::from((IoError(err), "an IO error occured".to_string()))
     }
 }
 
-impl FromError<semver::ParseError> for PuppetfileError {
-    fn from_error(err: semver::ParseError) -> PuppetfileError {
-        FromError::from_error((SemverError(err), "an invalid version was given".to_string()))
+impl From<semver::ParseError> for PuppetfileError {
+    fn from(err: semver::ParseError) -> PuppetfileError {
+        From::from((SemverError(err), "an invalid version was given".to_string()))
     }
 }
 
-impl FromError<grammar::ParseError> for PuppetfileError {
-    fn from_error(err: grammar::ParseError) -> PuppetfileError {
-        FromError::from_error((ParseError(err), "could not parse the Puppetfile".to_string()))
+impl From<grammar::ParseError> for PuppetfileError {
+    fn from(err: grammar::ParseError) -> PuppetfileError {
+        From::from((ParseError(err), "could not parse the Puppetfile".to_string()))
     }
 }
 
-impl FromError<json::DecoderError> for PuppetfileError {
-    fn from_error(err: json::DecoderError) -> PuppetfileError {
-        FromError::from_error((JsonError(err), "an error occured while decoding JSON".to_string()))
+impl From<json::DecoderError> for PuppetfileError {
+    fn from(err: json::DecoderError) -> PuppetfileError {
+        From::from((JsonError(err), "an error occured while decoding JSON".to_string()))
     }
 }
 
-impl FromError<(ErrorKind, String)> for PuppetfileError {
-    fn from_error((kind, desc): (ErrorKind, String)) -> PuppetfileError {
+impl From<(ErrorKind, String)> for PuppetfileError {
+    fn from((kind, desc): (ErrorKind, String)) -> PuppetfileError {
         PuppetfileError {
             kind: kind,
             desc: desc,
@@ -154,7 +149,8 @@ impl Module {
     /// The current version of the module returned from the forge API
     pub fn forge_version(&self, forge_url: &str) -> Result<semver::Version, PuppetfileError> {
         let url = try!(self.version_url(forge_url));
-        let mut response = try!(Client::new().get(&url[..]).send());
+        let client = Client::new();
+        let mut response = try!(client.get(&*url).send());
         let mut response_string = String::new();
         try!(response.read_to_string(&mut response_string));
         let version_struct: ForgeVersionResponse = try!(json::decode(&response_string));
@@ -171,7 +167,7 @@ impl Module {
         };
         let (user, mod_name) = match self.user_name_pair() {
             Some((user, mod_name)) => (user, mod_name),
-            None => return Err(FromError::from_error((UrlBuilding, "Could not build url".to_string())))
+            None => return Err(From::from((UrlBuilding, "Could not build url".to_string())))
         };
 
         Ok(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name))

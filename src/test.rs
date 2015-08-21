@@ -10,8 +10,9 @@ fn empty_file() {
         "https://forge.puppetlabs.com",
         parsed.forge
     );
+    let expected: Vec<Module> = vec![];
     assert_eq!(
-        vec![],
+        expected,
         parsed.modules
     );
 }
@@ -86,7 +87,7 @@ mod 'mayflower/php',
 #[test]
 fn format() {
     let version = ModuleInfo::Version(VersionReq::parse("= 1.0.0").unwrap());
-    assert_eq!(String::from_str("= 1.0.0"), format!("{}", version));
+    assert_eq!("= 1.0.0".to_string(), format!("{}", version));
 
     let mod_info = ModuleInfo::Info(
         "git".to_string(),
@@ -126,8 +127,8 @@ mod 'mayflower/php', '= 1.0.0',
 fn version_url() {
     let module = Module { name: "mayflower/php".to_string(), info: vec![] };
     assert_eq!(
-        Ok("https://forge.puppetlabs.com/users/mayflower/modules/php/releases/find.json".to_string()),
-        module.version_url("https://forge.puppetlabs.com/")
+        "https://forge.puppetlabs.com/users/mayflower/modules/php/releases/find.json".to_string(),
+        module.version_url("https://forge.puppetlabs.com/").unwrap()
     )
 }
 
