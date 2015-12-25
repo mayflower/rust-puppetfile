@@ -1,7 +1,7 @@
 [package]
 
 name = "puppetfile"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Robin Gloster <robin.gloster@mayflower.de>"]
 license = "MIT"
 description = "Puppetfile parser"
@@ -12,8 +12,8 @@ readme = "README.md"
 keywords = ["puppetfile", "parser", "r10k"]
 
 [dependencies]
-semver = "0.1.16"
-url = "0.2.17"
-hyper = "0.6.0"
+semver = "0.2.0"
+url = "0.5.2"
+hyper = "0.7.0"
 log = "0.3.1"
 rustc-serialize = "0.3.10"
