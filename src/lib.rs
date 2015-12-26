@@ -26,7 +26,7 @@ pub struct Puppetfile {
     /// The forge URL
     pub forge: String,
     /// All Modules contained in the Puppetfile
-    pub modules: Vec<Module>
+    pub modules: Vec<Module>,
 }
 
 impl Puppetfile {
@@ -38,7 +38,8 @@ impl Puppetfile {
 impl fmt::Display for Puppetfile {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let res = write!(f, "forge '{}'\n\n", self.forge);
-        self.modules.iter().fold(res, |prev_res, module| { prev_res.and(write!(f, "\n{}\n", module)) })
+        self.modules.iter().fold(res,
+                                 |prev_res, module| prev_res.and(write!(f, "\n{}\n", module)))
     }
 }
 
@@ -49,12 +50,12 @@ pub struct Module {
     /// Name of the module
     pub name: String,
     /// More information about the module
-    pub info: Vec<ModuleInfo>
+    pub info: Vec<ModuleInfo>,
 }
 
 #[derive(RustcDecodable)]
 struct ForgeVersionResponse {
-    version: String
+    version: String,
 }
 
 /// represents the type of error of a PuppetfileError
@@ -108,13 +109,15 @@ impl From<semver::ParseError> for PuppetfileError {
 
 impl From<grammar::ParseError> for PuppetfileError {
     fn from(err: grammar::ParseError) -> PuppetfileError {
-        From::from((ParseError(err), "could not parse the Puppetfile".to_string()))
+        From::from((ParseError(err),
+                    "could not parse the Puppetfile".to_string()))
     }
 }
 
 impl From<json::DecoderError> for PuppetfileError {
     fn from(err: json::DecoderError) -> PuppetfileError {
-        From::from((JsonError(err), "an error occured while decoding JSON".to_string()))
+        From::from((JsonError(err),
+                    "an error occured while decoding JSON".to_string()))
     }
 }
 
@@ -140,7 +143,7 @@ impl Error for PuppetfileError {
             IoError(ref err) => Some(err as &Error),
             SemverError(ref err) => Some(err as &Error),
             ParseError(ref err) => Some(err as &Error),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -163,14 +166,17 @@ impl Module {
     pub fn version_url(&self, forge_url: &str) -> Result<String, PuppetfileError> {
         let stripped_url = match forge_url.ends_with("/") {
             true => &forge_url[..forge_url.len() - 1],
-            _    => &forge_url[..]
+            _ => &forge_url[..],
         };
         let (user, mod_name) = match self.user_name_pair() {
             Some((user, mod_name)) => (user, mod_name),
-            None => return Err(From::from((UrlBuilding, "Could not build url".to_string())))
+            None => return Err(From::from((UrlBuilding, "Could not build url".to_string()))),
         };
 
-        Ok(format!("{}/users/{}/modules/{}/releases/find.json", stripped_url, user, mod_name))
+        Ok(format!("{}/users/{}/modules/{}/releases/find.json",
+                   stripped_url,
+                   user,
+                   mod_name))
     }
 
     /// Returns user and module name from 'user/mod_name'
@@ -188,7 +194,7 @@ impl Module {
         for info in self.info.iter() {
             match *info {
                 ModuleInfo::Version(ref v) => return Some(v),
-                ModuleInfo::Info(..) => ()
+                ModuleInfo::Info(..) => (),
             }
         }
         None
@@ -213,14 +219,14 @@ pub enum ModuleInfo {
     /// Version as String
     Version(VersionReq),
     /// Key Value based Information
-    Info(String, String)
+    Info(String, String),
 }
 impl ModuleInfo {
     /// Returns `true` if the option is a `Version` value
     pub fn is_version(&self) -> bool {
         match *self {
-            ModuleInfo::Version(..)    => true,
-            ModuleInfo::Info(..) => false
+            ModuleInfo::Version(..) => true,
+            ModuleInfo::Info(..) => false,
         }
     }
 }
@@ -229,8 +235,7 @@ impl fmt::Display for ModuleInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ModuleInfo::Version(ref v) => write!(f, "{}", v),
-            ModuleInfo::Info(ref k, ref v) => write!(f, ":{} => '{}'", k, v)
+            ModuleInfo::Info(ref k, ref v) => write!(f, ":{} => '{}'", k, v),
         }
     }
 }
-
