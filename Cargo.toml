@@ -3,7 +3,7 @@
 name = "puppetfile"
 version = "0.2.1"
 authors = ["Robin Gloster <robin.gloster@mayflower.de>"]
-license = "MIT"
+license = "MIT OR Apache-2.0"
 description = "Puppetfile parser"
 documentation = "http://mayflower.github.io/rust-puppetfile"
 homepage = "https://github.com/Mayflower/rust-puppetfile"
