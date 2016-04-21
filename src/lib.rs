@@ -66,7 +66,7 @@ pub enum ErrorKind {
     /// an IO error
     IoError(io::Error),
     /// an error while parsing the version
-    SemverError(semver::ParseError),
+    SemverError(semver::SemVerError),
     /// an error while parsing JSON
     JsonError(json::DecoderError),
     /// an error while building the forge URL
@@ -101,8 +101,8 @@ impl From<io::Error> for PuppetfileError {
     }
 }
 
-impl From<semver::ParseError> for PuppetfileError {
-    fn from(err: semver::ParseError) -> PuppetfileError {
+impl From<semver::SemVerError> for PuppetfileError {
+    fn from(err: semver::SemVerError) -> PuppetfileError {
         From::from((SemverError(err), "an invalid version was given".to_string()))
     }
 }
