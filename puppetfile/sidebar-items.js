@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ErrorKind","represents the type of error of a PuppetfileError"],["ModuleInfo","Further Information on Puppet Modules"]],"struct":[["Module","The representation of a puppet module"],["Puppetfile","This represents a Puppetfile"],["PuppetfileError","represents an error while checking the version published on the forge"]]});
